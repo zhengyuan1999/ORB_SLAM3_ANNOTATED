@@ -30,9 +30,12 @@ endif()
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 
-find_package(OpenCV 4.4)
+# ROS noetic 自带 OpenCV 4.2.0，没必要再配置一个 4.4，直接让 cmake 找 4.2.0
+# find_package(OpenCV 4.4)
+find_package(OpenCV 4)
    if(NOT OpenCV_FOUND)
-      message(FATAL_ERROR "OpenCV > 4.4 not found.")
+#       message(FATAL_ERROR "OpenCV > 4.4 not found.")
+      message(FATAL_ERROR "OpenCV > 4 not found.")
    endif()
 
 MESSAGE("OPENCV VERSION:")
