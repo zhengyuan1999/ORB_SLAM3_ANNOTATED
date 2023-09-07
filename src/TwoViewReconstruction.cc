@@ -188,7 +188,7 @@ void TwoViewReconstruction::FindFundamental(vector<bool> &vbMatchesInliers, floa
     const int N = vbMatchesInliers.size(); // 经验证，传进来的 vbMatchesInliers 长度为 0
 
     // Normalize coordinates
-    vector<cv::Point2f> vPn1, vPn2; // 归一化的特征点坐标
+    vector<cv::Point2f> vPn1, vPn2; // 归一化的关键点坐标
     Eigen::Matrix3f T1, T2;
     Normalize(mvKeys1, vPn1, T1);
     Normalize(mvKeys2, vPn2, T2);
@@ -766,8 +766,8 @@ void TwoViewReconstruction::Normalize(const vector<cv::KeyPoint> &vKeys, vector<
      * | vNormalizedPoints[i].y | = | (vKeys[i].pt.y - meanX) * sY | = |  0 sY -meanY * sY | * | vKeys[i].pt.y |
      * |                      1 |   |                            1 |   |  0  0         1.0 |   |             1 |
     */
-    float meanX = 0; // 特征点 x 坐标的均值（一阶中心距）
-    float meanY = 0; // 特征点 y 坐标的均值
+    float meanX = 0; // 关键点 x 坐标的均值（一阶中心距）
+    float meanY = 0; // 关键点 y 坐标的均值
     const int N = vKeys.size();
 
     vNormalizedPoints.resize(N);
@@ -781,8 +781,8 @@ void TwoViewReconstruction::Normalize(const vector<cv::KeyPoint> &vKeys, vector<
     meanX = meanX / N;
     meanY = meanY / N;
 
-    float meanDevX = 0; // 特征点 x 坐标的一阶原点距
-    float meanDevY = 0; // 特征点 y 坐标的一阶原点距
+    float meanDevX = 0; // 关键点 x 坐标的一阶原点距
+    float meanDevY = 0; // 关键点 y 坐标的一阶原点距
 
     for (int i = 0; i < N; i++)
     {

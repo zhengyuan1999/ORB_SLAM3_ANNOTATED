@@ -42,10 +42,10 @@ public:
     /**
      * @brief 同时计算基础
      * 
-     * @param[in] vKeys1 Frame 1 的特征点 vector
-     * @param[in] vKeys2 Frame 2 的特征点 vector
+     * @param[in] vKeys1 Frame 1 的关键点 vector
+     * @param[in] vKeys2 Frame 2 的关键点 vector
      * @param[in] vMatches12
-     * @param[out] T21 通过匹配的特征点恢复出来运动结构 T21
+     * @param[out] T21 通过匹配的关键点恢复出来运动结构 T21
      * @param[out] vP3D 
      * @param[out] vbTriangulated
     */
@@ -79,15 +79,15 @@ private:
 
 
 // mvKeys1、mvKeys2、mvMatches12 和 mvbMatched1 只在 Reconstruct 中被赋值
-    // 来自参考帧（Frame 1）的特征点 vector（Keypoints from Reference Frame (Frame 1)）
+    // 来自参考帧（Frame 1）的关键点 vector（Keypoints from Reference Frame (Frame 1)）
     std::vector<cv::KeyPoint> mvKeys1;
 
-    // 来自当前帧（Frame 2）的特征点 vector（Keypoints from Current Frame (Frame 2)）
+    // 来自当前帧（Frame 2）的关键点 vector（Keypoints from Current Frame (Frame 2)）
     std::vector<cv::KeyPoint> mvKeys2;
 
     // Current Matches from Reference to Current
-    std::vector<Match> mvMatches12; // 存储着 Frame 1 和 Frame 2 匹配的特征点对，第一个 int 来自 Frame 1
-    std::vector<bool> mvbMatched1;  // 存储着 Frame 1 的特征点是否匹配到了 Frame 2 的特征点
+    std::vector<Match> mvMatches12; // 存储着 Frame 1 和 Frame 2 匹配的关键点对，第一个 int 来自 Frame 1
+    std::vector<bool> mvbMatched1;  // 存储着 Frame 1 的关键点是否匹配到了 Frame 2 的关键点
 
 
 // mk、mSigma、mSigma2 和 mMaxIterations 只在构造方法中被赋值
