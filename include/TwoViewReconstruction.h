@@ -29,38 +29,99 @@ namespace ORB_SLAM3
 
 class TwoViewReconstruction
 {
+    // 第一个 int 来自 Frame 1，保存着 mvKeys1 的索引
+    // 第二个 int 来自 Frame 2，保存着 mvKeys2 的索引
     typedef std::pair<int, int> Match;
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     
     // Fix the reference frame
+    /**
+     * @brief 初始化成员对象
+     * 
+     * @param[in] k 相机内参矩阵
+     * @param[in] sigma 标准差
+     * @param[in] iterations RANSAC 算法最大迭代次数
+    */
     TwoViewReconstruction(const Eigen::Matrix3f &k, float sigma = 1.0, int iterations = 200);
 
     // Computes in parallel a fundamental matrix and a homography
     // Selects a model and tries to recover the motion and the structure from motion
     /**
-     * @brief 同时计算基础
+     * @brief 同时计算基础矩阵和单应矩阵，并根据得分结果来选择使用哪个矩阵恢复运动结构
      * 
      * @param[in] vKeys1 Frame 1 的关键点 vector
      * @param[in] vKeys2 Frame 2 的关键点 vector
-     * @param[in] vMatches12
+     * @param[in] vMatches12 其索引与 vKeys1 相对应，索引内容为与之匹配的关键点在 vKeys2 的索引
      * @param[out] T21 通过匹配的关键点恢复出来运动结构 T21
-     * @param[out] vP3D 
-     * @param[out] vbTriangulated
+     * @param[out] vP3D 其索引与 vKeys1 相对应，索引内容为该关键点对应的路标点
+     * @param[out] vbTriangulated 其索引与 vKeys1 相对应，索引内容为该关键点是否三角化出路标点
     */
     bool Reconstruct(const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2, const std::vector<int> &vMatches12,
-                        Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated);
+            Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated);
 
 private:
+
+    /**
+     * @brief 解算出 RANSAC 集合所有单应矩阵 H21，并通过方法参数返回得分最高者
+     * 
+     * @param[out] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为最优单应矩阵的内点
+     * @param[out] score 最优的得分
+     * @param[out] H21 解算出来得分最优的单应矩阵 H21
+    */
     void FindHomography(std::vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &H21);
+    
+    /**
+     * @brief 解算出 RANSAC 集合所有基础矩阵 F21，并通过方法参数返回得分最高者
+     * 
+     * @param[out] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为最优基础矩阵的内点
+     * @param[out] score 最优的得分
+     * @param[out] H21 解算出来得分最优的基础矩阵 H
+    */
     void FindFundamental(std::vector<bool> &vbInliers, float &score, Eigen::Matrix3f &F21);
 
+    /**
+     * @brief 给定 8 点对计算单应矩阵
+     * 
+     * @param[in] vP1 来自 Frame 1 的 8 个关键点
+     * @param[in] vP2 来自 Frame 2 的 8 个关键点，与 vP1 的关键点一一匹配
+     * 
+     * @return 解算出来的单应矩阵 H21
+    */
     Eigen::Matrix3f ComputeH21(const std::vector<cv::Point2f> &vP1, const std::vector<cv::Point2f> &vP2);
+    
+    /**
+     * @brief 给定 8 点对计算基础矩阵
+     * 
+     * @param[in] vP1 来自 Frame 1 的 8 个关键点
+     * @param[in] vP2 来自 Frame 2 的 8 个关键点，与 vP1 的关键点一一匹配
+     * 
+     * @return 解算出来的基础矩阵 F21
+    */
     Eigen::Matrix3f ComputeF21(const std::vector<cv::Point2f> &vP1, const std::vector<cv::Point2f> &vP2);
 
+    /**
+     * @brief 通过重投影误差计算 H21 的分数
+     * 
+     * @param[in] H21 单应矩阵 H21
+     * @param[in] H12 单应矩阵 H12
+     * @param[out] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为 H21 的内点
+     * @param[in] sigma 标准差
+     * 
+     * @return 得分
+    */
     float CheckHomography(const Eigen::Matrix3f &H21, const Eigen::Matrix3f &H12, std::vector<bool> &vbMatchesInliers, float sigma);
 
+    /**
+     * @brief 通过重投影误差计算 F21 的分数
+     * 
+     * @param[in] F21 单应矩阵 F21
+     * @param[out] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为 F21 的内点
+     * @param[in] sigma 标准差
+     * 
+     * @return 得分
+    */
     float CheckFundamental(const Eigen::Matrix3f &F21, std::vector<bool> &vbMatchesInliers, float sigma);
 
     bool ReconstructF(std::vector<bool> &vbMatchesInliers, Eigen::Matrix3f &F21, Eigen::Matrix3f &K,
@@ -69,6 +130,13 @@ private:
     bool ReconstructH(std::vector<bool> &vbMatchesInliers, Eigen::Matrix3f &H21, Eigen::Matrix3f &K,
                         Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated, float minParallax, int minTriangulated);
 
+    /**
+     * @brief 
+     * 
+     * @param[in] vKeys
+     * @param[in] vNormalizedPoints
+     * @param[in] T
+    */
     void Normalize(const std::vector<cv::KeyPoint> &vKeys, std::vector<cv::Point2f> &vNormalizedPoints, Eigen::Matrix3f &T);
 
     int CheckRT(const Eigen::Matrix3f &R, const Eigen::Vector3f &t, const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2,
@@ -86,7 +154,7 @@ private:
     std::vector<cv::KeyPoint> mvKeys2;
 
     // Current Matches from Reference to Current
-    std::vector<Match> mvMatches12; // 存储着 Frame 1 和 Frame 2 匹配的关键点对，第一个 int 来自 Frame 1
+    std::vector<Match> mvMatches12; // 存储着 Frame 1 和 Frame 2 匹配的关键点对
     std::vector<bool> mvbMatched1;  // 存储着 Frame 1 的关键点是否匹配到了 Frame 2 的关键点
 
 
@@ -95,8 +163,11 @@ private:
     float mSigma, mSigma2; // 标准差和方差（Standard Deviation and Variance）
     int mMaxIterations;    // RANSAC 算法最大迭代次数（Ransac max iterations）
 
-    // Ransac sets
-    std::vector<std::vector<size_t>> mvSets;
+
+// mvSets 只在 Reconstruct 中被赋值 
+    // 第一层 vector 长度为 mMaxIterations，保存所有 RANSAC 集合元素
+    // 第二层 vector 长度为 8，每个集合元素为 8 个点对，索引内容为 mvMatches12 的索引
+    std::vector<std::vector<size_t>> mvSets; // Ransac sets
 };
 
 } // namespace ORB_SLAM

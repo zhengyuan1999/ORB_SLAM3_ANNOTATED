@@ -76,7 +76,7 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint> &vKeys1,
     }
 
     // 第一层 vector 长度为 mMaxIterations，保存所有 RANSAC 集合元素
-    // 第二层 vector 长度为 8，每个集合元素为 8 个点对
+    // 第二层 vector 长度为 8，每个集合元素为 8 个点对，索引内容为 mvMatches12 的索引
     // Generate sets of 8 points for each RANSAC iteration
     mvSets = vector<vector<size_t>>(mMaxIterations, vector<size_t>(8, 0));
 
