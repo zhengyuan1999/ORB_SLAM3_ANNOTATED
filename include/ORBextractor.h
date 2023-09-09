@@ -59,11 +59,24 @@ public:
     */
     ORBextractor(int nfeatures, float scaleFactor, int nlevels, int iniThFAST, int minThFAST);
 
-    ~ORBextractor() {}
+    /**
+     * @brief 没用到的析构函数，可以不写
+    */
+    // ~ORBextractor() {}
 
     // Compute the ORB features and descriptors on an image.
     // ORB are dispersed on the image using an octree.
-    // Mask is ignored in the current implementation.
+    /**
+     * @brief
+     * 
+     * @param[in] _image
+     * @param[in] _mask 未被实现（Mask is ignored in the current implementation.）
+     * @param[out] _keypoints 提取到的关键点 vector
+     * @param[out] _descriptors 与 _keypoints 对应的描述子矩阵
+     * @param[out] vLappingArea
+     * 
+     * @return 
+    */
     int operator()(cv::InputArray _image, cv::InputArray _mask,
         std::vector<cv::KeyPoint> &_keypoints, cv::OutputArray _descriptors, std::vector<int> &vLappingArea);
 
@@ -96,9 +109,10 @@ protected:
     int iniThFAST;      // FAST 关键点初始阈值（默认 20）
     int minThFAST;      // 当使用初始阈值没有提取到关键点时用本最小阈值（默认 7）
 
+    // 每层图像金字塔需要提取关键点的数量，默认 []
     std::vector<int> mnFeaturesPerLevel;
 
-    std::vector<int> umax;
+    std::vector<int> umax; 
 
     std::vector<float> mvScaleFactor;
     std::vector<float> mvInvScaleFactor;
