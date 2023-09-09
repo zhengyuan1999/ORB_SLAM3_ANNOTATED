@@ -117,7 +117,7 @@ bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint> &vKeys1,
         return false;
     float RH = SH / (SH + SF);
 
-    float minParallax = 1.0; // 没用
+    float minParallax = 1.0;
 
     // Try to reconstruct from homography or fundamental depending on the ratio (0.40-0.45)
     if (RH > 0.50) // if(RH>0.40)
@@ -244,7 +244,7 @@ Eigen::Matrix3f TwoViewReconstruction::ComputeH21(const vector<cv::Point2f> &vP1
 
     Eigen::MatrixXf A(2 * N, 9);
 
-    // 详细推导在 SLAM14 讲 P172
+    // 详细推导参考计算机视觉中的多视图几何（原书第 2 版）第 11 章
     for (int i = 0; i < N; i++)
     {
         const float u1 = vP1[i].x;
@@ -286,7 +286,7 @@ Eigen::Matrix3f TwoViewReconstruction::ComputeF21(const vector<cv::Point2f> &vP1
 
     Eigen::MatrixXf A(N, 9);
 
-    // 详细推导在 SLAM14 讲 P169
+    // 详细推导参考计算机视觉中的多视图几何（原书第 2 版）第 11 章
     for (int i = 0; i < N; i++)
     {
         const float u1 = vP1[i].x;
@@ -312,7 +312,7 @@ Eigen::Matrix3f TwoViewReconstruction::ComputeF21(const vector<cv::Point2f> &vP1
     // V 矩阵的列向量是 A^T * A 的特征向量，因此 A^T * A * svd.matrixV().col(8) = 0，即 A * svd.matrixV().col(8) = 0
     Eigen::Matrix<float, 3, 3, Eigen::RowMajor> Fpre(svd.matrixV().col(8).data());
 
-    // 基础矩阵 F 的秩为 2，但上面的结果 Fpre 的秩不一定为 2，需要通过二次奇异值分解来强制使其秩变为 2
+    // 基础矩阵 F 的秩为 2，但上面的结果 Fpre 的秩一般不为为 2，需要通过二次奇异值分解来强制使其秩变为 2
     Eigen::JacobiSVD<Eigen::Matrix3f> svd2(Fpre, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
     Eigen::Vector3f w = svd2.singularValues();
@@ -492,12 +492,14 @@ float TwoViewReconstruction::CheckFundamental(const Eigen::Matrix3f &F21, vector
 bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, Eigen::Matrix3f &F21, Eigen::Matrix3f &K,
         Sophus::SE3f &T21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, float minParallax, int minTriangulated)
 {
-    int N = 0;
+// Step1. 计算内点数量 N
+    int N = 0; // 计算有多少内点
     for (size_t i = 0, iend = vbMatchesInliers.size(); i < iend; i++)
         if (vbMatchesInliers[i])
             N++;
 
-    // Compute Essential Matrix from Fundamental Matrix
+// Step2. 恢复可能的运动结构
+    // 计算本质矩阵（Compute Essential Matrix from Fundamental Matrix）
     Eigen::Matrix3f E21 = K.transpose() * F21 * K;
 
     Eigen::Matrix3f R1, R2;
@@ -509,6 +511,7 @@ bool TwoViewReconstruction::ReconstructF(vector<bool> &vbMatchesInliers, Eigen::
     Eigen::Vector3f t1 = t;
     Eigen::Vector3f t2 = -t;
 
+// Step3. 检查这四种可能的运动结构（(R1, t1), (R1, t2), (R2, t1), (R2, t2)）
     // Reconstruct with the 4 hyphoteses and check
     vector<cv::Point3f> vP3D1, vP3D2, vP3D3, vP3D4;
     vector<bool> vbTriangulated1, vbTriangulated2, vbTriangulated3, vbTriangulated4;
@@ -863,7 +866,7 @@ int TwoViewReconstruction::CheckRT(const Eigen::Matrix3f &R, const Eigen::Vector
 
         if (!isfinite(p3dC1(0)) || !isfinite(p3dC1(1)) || !isfinite(p3dC1(2)))
         {
-            vbGood[vMatches12[i].first] = false;
+            // vbGood[vMatches12[i].first] = false; // 原来就是 false，这步没必要
             continue;
         }
 
@@ -877,6 +880,7 @@ int TwoViewReconstruction::CheckRT(const Eigen::Matrix3f &R, const Eigen::Vector
         float cosParallax = normal1.dot(normal2) / (dist1 * dist2);
 
         // Check depth in front of first camera (only if enough parallax, as "infinite" points can easily go to negative depth)
+        // 检查该路标点在 Frame 1 下的深度是否为正
         if (p3dC1(2) <= 0 && cosParallax < 0.99998)
             continue;
 
@@ -931,7 +935,7 @@ int TwoViewReconstruction::CheckRT(const Eigen::Matrix3f &R, const Eigen::Vector
 
 void TwoViewReconstruction::DecomposeE(const Eigen::Matrix3f &E, Eigen::Matrix3f &R1, Eigen::Matrix3f &R2, Eigen::Vector3f &t)
 {
-
+    // 详细推导参考计算机视觉中的多视图几何（原书第 2 版）9.6.2
     Eigen::JacobiSVD<Eigen::Matrix3f> svd(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
     Eigen::Matrix3f U = svd.matrixU();

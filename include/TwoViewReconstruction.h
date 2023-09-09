@@ -55,8 +55,8 @@ public:
      * @param[in] vKeys2 Frame 2 的关键点 vector
      * @param[in] vMatches12 其索引与 vKeys1 相对应，索引内容为与之匹配的关键点在 vKeys2 的索引
      * @param[out] T21 通过匹配的关键点恢复出来运动结构 T21
-     * @param[out] vP3D 其索引与 vKeys1 相对应，索引内容为该关键点对应的路标点
-     * @param[out] vbTriangulated 其索引与 vKeys1 相对应，索引内容为该关键点是否三角化出路标点
+     * @param[out] vP3D 其索引与 vKeys1 相对应，索引内容为该关键点恢复出的路标点
+     * @param[out] vbTriangulated 其索引与 vKeys1 相对应，索引内容为该关键点是否恢复出路标点
     */
     bool Reconstruct(const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2, const std::vector<int> &vMatches12,
             Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated);
@@ -124,25 +124,63 @@ private:
     */
     float CheckFundamental(const Eigen::Matrix3f &F21, std::vector<bool> &vbMatchesInliers, float sigma);
 
+    /**
+     * @brief 从给定的基础矩阵中恢复运动结构，并三角化恢复路标点
+     * 
+     * @param[in] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为 F21 的内点
+     * @param[in] F21 Frame 1 到 Frame 2 的基础矩阵
+     * @param[in] K 相机内参矩阵
+     * @param[out] T21 通过基础矩阵恢复出来的变换矩阵
+     * @param[out] vP3D 其索引与 mvKeys1 相对应，索引内容为该关键点恢复出的路标点
+     * @param[out] vbTriangulated 其索引与 mvKeys1 相对应，索引内容为该关键点是否恢复出路标点
+     * @param[in] minParallax 认为三角化有效的最小视差角
+     * @param[in] minTriangulated 三角化恢复的最少路标点数量（默认 50 与 0.9 倍内点的最大值）
+     * 
+     * @return 是否通过恢复的运动结构三角化恢复出足够多且准确的路标点
+    */
     bool ReconstructF(std::vector<bool> &vbMatchesInliers, Eigen::Matrix3f &F21, Eigen::Matrix3f &K,
-                        Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated, float minParallax, int minTriangulated);
+            Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated, float minParallax, int minTriangulated);
 
     bool ReconstructH(std::vector<bool> &vbMatchesInliers, Eigen::Matrix3f &H21, Eigen::Matrix3f &K,
-                        Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated, float minParallax, int minTriangulated);
+            Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated, float minParallax, int minTriangulated);
+
+    /**
+     * @brief 对给定的关键点 vector 进行归一化，这是计算基础矩阵和单应矩阵的前置步骤
+     * 
+     * @param[in] vKeys 原始的关键点
+     * @param[in] vNormalizedPoints 归一化的关键点
+     * @param[in] T 归一化矩阵 vNormalizedPoints[i] = T * vKeys[i]
+    */
+    void Normalize(const std::vector<cv::KeyPoint> &vKeys, std::vector<cv::Point2f> &vNormalizedPoints, Eigen::Matrix3f &T);
 
     /**
      * @brief 
      * 
-     * @param[in] vKeys
-     * @param[in] vNormalizedPoints
-     * @param[in] T
+     * @param[in] R 可能的旋转矩阵
+     * @param[in] t 可能的位置向量
+     * @param[in] vKeys1 Frame 1 的关键点 vector
+     * @param[in] vKeys2 Frame 2 的关键点 vector
+     * @param[in] vMatches12 索引与 vKeys1 相对应，索引内容为与之匹配的关键点在 vKeys2 的索引
+     * @param[in] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为 F21 的内点
+     * @param[in] K 相机内参矩阵
+     * @param[out] vP3D 其索引与 mvKeys1 相对应，索引内容为该关键点恢复出的路标点
+     * @param[in] th2 
+     * @param[out] vbGood 其索引与 mvKeys1 相对应，索引内容为该关键点是否恢复出路标点
+     * 
+     * @return 三角化恢复的路标点数量
     */
-    void Normalize(const std::vector<cv::KeyPoint> &vKeys, std::vector<cv::Point2f> &vNormalizedPoints, Eigen::Matrix3f &T);
-
     int CheckRT(const Eigen::Matrix3f &R, const Eigen::Vector3f &t, const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2,
-                const std::vector<Match> &vMatches12, std::vector<bool> &vbMatchesInliers,
-                const Eigen::Matrix3f &K, std::vector<cv::Point3f> &vP3D, float th2, std::vector<bool> &vbGood, float &parallax);
+            const std::vector<Match> &vMatches12, std::vector<bool> &vbMatchesInliers,
+            const Eigen::Matrix3f &K, std::vector<cv::Point3f> &vP3D, float th2, std::vector<bool> &vbGood, float &parallax);
 
+    /**
+     * @brief 由本质矩阵 E 恢复可能的运动结构
+     * 
+     * @param[in] E 本质矩阵
+     * @param[out] R1 可能的旋转矩阵
+     * @param[out] R2 可能的旋转矩阵
+     * @param[out] t 可能的位置向量（另一个可能的位置向量为 -t）
+    */
     void DecomposeE(const Eigen::Matrix3f &E, Eigen::Matrix3f &R1, Eigen::Matrix3f &R2, Eigen::Vector3f &t);
 
 
