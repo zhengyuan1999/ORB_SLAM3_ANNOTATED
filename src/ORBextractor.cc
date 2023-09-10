@@ -77,7 +77,7 @@ const int EDGE_THRESHOLD = 19; // 图像 Padding 尺寸
  * @param[in] pt 像素点 pt（实际就是关键点）
  * @param[in] u_max 图像块的每一行的坐标边界
  * 
- * @return 点 pt 的角度，范围为 [0, 360°]
+ * @return 点 pt 的角度，范围为 [0, 360°)
 */
 static float IC_Angle(const Mat &image, Point2f pt, const vector<int> &u_max)
 {
