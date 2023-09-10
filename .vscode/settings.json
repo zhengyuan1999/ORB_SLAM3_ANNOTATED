@@ -67,6 +67,10 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "valarray": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "*.ipp": "cpp",
+        "geometry": "cpp",
+        "matrixfunctions": "cpp",
+        "*.txx": "cpp"
     }
 }
