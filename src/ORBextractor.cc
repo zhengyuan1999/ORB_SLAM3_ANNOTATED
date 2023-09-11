@@ -1371,9 +1371,8 @@ void ORBextractor::ComputePyramid(cv::Mat image)
  * 个 BUG 是因为提取了边界关键点反而使得系统不稳定，绝大部分的边界关
  * 键点都不会在其他帧找到匹配（由于相机运动或边界填充方法等）
 */
-/*
 // TODO 修改后，mvImagePyramid 存放的是真正 Padding 的图像
-void ORBextractor::ComputePyramid(cv::Mat image)
+void ORBextractor::ComputePyramidNew(cv::Mat image)
 {
     for (int level = 0; level < nlevels; ++level)
     {
@@ -1416,6 +1415,5 @@ void ORBextractor::ComputePyramid(cv::Mat image)
         }
     }
 }
-*/
 
 } // namespace ORB_SLAM

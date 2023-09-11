@@ -114,6 +114,7 @@ protected:
      * @param[in] image 图像
     */
     void ComputePyramid(cv::Mat image);
+    void ComputePyramidNew(cv::Mat image);
 
     /**
      * @brief 使用八叉树法（四叉树法）提取图像金字塔的关键点
