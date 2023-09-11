@@ -278,8 +278,8 @@ private:
     std::mutex mMutexState;
 
     //
-    string mStrLoadAtlasFromFile;
-    string mStrSaveAtlasToFile;
+    string mStrLoadAtlasFromFile; // 加载地图文件的路径
+    string mStrSaveAtlasToFile;   // 保存地图文件的路径
 
     string mStrVocabularyFilePath;
 
