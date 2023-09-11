@@ -68,6 +68,8 @@ namespace ORB_SLAM3
 
 const int PATCH_SIZE = 31;
 const int HALF_PATCH_SIZE = 15;
+// 理论上 EDGE_THRESHOLD 最小应该设置为 15（为了计算关键点方向和其描述子需要在以关键点为中心半径为 15 的圆中采样）
+// 但是将其设为 3，代码依然能正常运行，可能是数据集图像关键点没有刚好在边界的情况出现（否则需要计算关键点方向和其描述子，必然越界）
 const int EDGE_THRESHOLD = 19; // 图像 Padding 尺寸
 
 /**
@@ -1284,6 +1286,10 @@ int ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoin
         int i = 0;
         for (vector<KeyPoint>::iterator keypoint = keypoints.begin(), keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
         {
+            // 修改方法 ComputePyramid 后，应该将关键点坐标拉回到真正图像的坐标系（而不是 Padding 后图像的坐标系）
+            // keypoint->pt.x -= EDGE_THRESHOLD;
+            // keypoint->pt.y -= EDGE_THRESHOLD;
+
             // Scale keypoint coordinates
             if (level != 0)
             {
@@ -1357,5 +1363,59 @@ void ORBextractor::ComputePyramid(cv::Mat image)
         }
     }
 }
+
+/**
+ * 使用本方法时，需要在 () 运算符重载方法中将注释的两行放开，放开后，
+ * 单目相机没有问题，但是 Frame::ComputeStereoMatches() 直接使用了
+ * mvImagePyramid，使用双目相机运行的话会出现段错误！！！不继续修改这
+ * 个 BUG 是因为提取了边界关键点反而使得系统不稳定，绝大部分的边界关
+ * 键点都不会在其他帧找到匹配（由于相机运动或边界填充方法等）
+*/
+/*
+// TODO 修改后，mvImagePyramid 存放的是真正 Padding 的图像
+void ORBextractor::ComputePyramid(cv::Mat image)
+{
+    for (int level = 0; level < nlevels; ++level)
+    {
+        float scale = mvInvScaleFactor[level];
+        Size sz(cvRound((float)image.cols * scale), cvRound((float)image.rows * scale)); // 原尺寸
+
+        // Compute the resized image
+        if (level != 0)
+        {
+            resize(
+                image,
+                mvImagePyramid[level],
+                sz,
+                0,
+                0,
+                INTER_LINEAR
+            );
+
+            copyMakeBorder(
+                mvImagePyramid[level],
+                mvImagePyramid[level],
+                EDGE_THRESHOLD,
+                EDGE_THRESHOLD,
+                EDGE_THRESHOLD,
+                EDGE_THRESHOLD,
+                BORDER_REFLECT_101 + BORDER_ISOLATED
+            );
+        }
+        else
+        {
+            copyMakeBorder(
+                image,
+                mvImagePyramid[level],
+                EDGE_THRESHOLD,
+                EDGE_THRESHOLD,
+                EDGE_THRESHOLD,
+                EDGE_THRESHOLD,
+                BORDER_REFLECT_101
+            );
+        }
+    }
+}
+*/
 
 } // namespace ORB_SLAM
