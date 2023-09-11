@@ -1207,7 +1207,9 @@ static void computeDescriptors(const Mat &image, vector<KeyPoint> &keypoints, Ma
     descriptors = Mat::zeros((int)keypoints.size(), 32, CV_8UC1);
 
     for (size_t i = 0; i < keypoints.size(); i++)
+    {
         computeOrbDescriptor(keypoints[i], image, &pattern[0], descriptors.ptr((int)i));
+    }
 }
 
 int ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoint> &_keypoints,
