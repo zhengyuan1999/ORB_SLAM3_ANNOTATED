@@ -17,75 +17,71 @@
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/map.hpp>
 
-namespace DBoW2 {
+namespace DBoW2
+{
 
-/// Id of words
-typedef unsigned int WordId;
+typedef unsigned int WordId; // 单词 ID 类型定义（Id of words）
+typedef double WordValue; 	 // 单词值类型定义（Value of a word）
+typedef unsigned int NodeId; // 节点 ID 类型定义（Id of nodes in the vocabulary treee）
 
-/// Value of a word
-typedef double WordValue;
-
-/// Id of nodes in the vocabulary treee
-typedef unsigned int NodeId;
-
-/// L-norms for normalization
+// 归一化方式（L-norms for normalization）
 enum LNorm
 {
-  L1,
-  L2
+	L1,
+	L2
 };
 
-/// Weighting type
+// 权重类型（Weighting type）
 enum WeightingType
 {
-  TF_IDF,
-  TF,
-  IDF,
-  BINARY
+	TF_IDF,
+	TF,
+	IDF,
+	BINARY
 };
 
-/// Scoring type
+// 评分标准（Scoring type）
 enum ScoringType
 {
-  L1_NORM,
-  L2_NORM,
-  CHI_SQUARE,
-  KL,
-  BHATTACHARYYA,
-  DOT_PRODUCT,
+	L1_NORM,
+	L2_NORM,
+	CHI_SQUARE,
+	KL,
+	BHATTACHARYYA,
+	DOT_PRODUCT,
 };
 
-/// Vector of words to represent images
-class BowVector: 
-	public std::map<WordId, WordValue>
+// 该类继承自 std::map<unsigned int, unsigned int>，保证了该类有序且关键字唯一
+class BowVector : public std::map<WordId, WordValue> // 图像描述向量类（Vector of words to represent images）
 {
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive& ar, const int version)
-    {
-        ar & boost::serialization::base_object<std::map<WordId, WordValue> >(*this);
-    }
+	friend class boost::serialization::access;
+	template <class Archive>
+	void serialize(Archive &ar, const int version)
+	{
+		ar &boost::serialization::base_object<std::map<WordId, WordValue>>(*this);
+	}
 
 public:
-
-	/** 
-	 * Constructor
+	/**
+	 * @brief 什么也没做（Constructor）
 	 */
 	BowVector(void);
 
 	/**
-	 * Destructor
+	 * @brief 什么也没做（Destructor）
 	 */
 	~BowVector(void);
-	
+
 	/**
-	 * Adds a value to a word value existing in the vector, or creates a new
-	 * word with the given value
-	 * @param id word id to look for
-	 * @param v value to create the word with, or to add to existing word
-	 */
+	 * @brief 如果单词存在（于本描述向量）则直接增加值，否则创建新的键值对 <id, v>（Adds
+	 * a value to a word value existing in the vector, or creates a new word
+	 * with the given value）
+	 * 
+	 * @param[in] id 单词 ID（word id to look for）
+	 * @param[in] v 待增加的单词值（value to create the word with, or to add to existing word）
+	*/
 	void addWeight(WordId id, WordValue v);
-	
+
 	/**
 	 * Adds a word with a value to the vector only if this does not exist yet
 	 * @param id word id to look for
@@ -94,18 +90,18 @@ public:
 	void addIfNotExist(WordId id, WordValue v);
 
 	/**
-	 * L1-Normalizes the values in the vector 
+	 * L1-Normalizes the values in the vector
 	 * @param norm_type norm used
 	 */
 	void normalize(LNorm norm_type);
-	
+
 	/**
 	 * Prints the content of the bow vector
 	 * @param out stream
 	 * @param v
 	 */
-	friend std::ostream& operator<<(std::ostream &out, const BowVector &v);
-	
+	friend std::ostream &operator<<(std::ostream &out, const BowVector &v);
+
 	/**
 	 * Saves the bow vector as a vector in a matlab file
 	 * @param filename
