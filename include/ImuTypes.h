@@ -112,7 +112,6 @@ public:
 
 
 // IMU calibration (Tbc, Tcb, noise)
-
 class Calib
 {
     friend class boost::serialization::access;
@@ -200,12 +199,23 @@ class Preintegrated
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    
     Preintegrated(const Bias &b_, const Calib &calib);
     Preintegrated(Preintegrated *pImuPre);
+
     Preintegrated() {}
     ~Preintegrated() {}
+
     void CopyFrom(Preintegrated *pImuPre);
     void Initialize(const Bias &b_);
+
+    /**
+     * @brief 计算预积分，更新噪声
+     * 
+     * @param[in] acceleration 加速度
+     * @param[in] angVel 角速度
+     * @param[in] dt 两个关键帧之间的时间差
+    */
     void IntegrateNewMeasurement(const Eigen::Vector3f &acceleration, const Eigen::Vector3f &angVel, const float &dt);
     void Reintegrate();
     void MergePrevious(Preintegrated *pPrev);
@@ -283,12 +293,49 @@ private:
 
 
 // Lie Algebra Functions
+/**
+ * @brief 求 so(3) 右雅可比 Jr
+ * 
+ * @param[in] x so(3) 第一个分量
+ * @param[in] y so(3) 第二个分量
+ * @param[in] z so(3) 第三个分量
+ * 
+ * @return 右雅可比 Jr
+*/
 Eigen::Matrix3f RightJacobianSO3(const float &x, const float &y, const float &z);
+
+/**
+ * @brief 求 so(3) 右雅可比 Jr
+ * 
+ * @param[in] v ∈ so(3)
+ * 
+ * @return 右雅可比 Jr
+*/
 Eigen::Matrix3f RightJacobianSO3(const Eigen::Vector3f &v);
 
+/**
+ * @brief 求 so(3) 右雅可比 Jr
+ * 
+ * @param[in] x so(3) 第一个分量
+ * @param[in] y so(3) 第二个分量
+ * @param[in] z so(3) 第三个分量
+ * 
+ * @return 右雅可比 Jr
+*/
 Eigen::Matrix3f InverseRightJacobianSO3(const float &x, const float &y, const float &z);
+
+/**
+ * @brief 求 so(3) 右雅可比 Jr
+ * 
+ * @param[in] v ∈ so(3)
+ * 
+ * @return 右雅可比 Jr
+*/
 Eigen::Matrix3f InverseRightJacobianSO3(const Eigen::Vector3f &v);
 
+/**
+ * @return U * V^T（R = U * diag * V^T）
+*/
 Eigen::Matrix3f NormalizeRotation(const Eigen::Matrix3f &R);
 
 }
