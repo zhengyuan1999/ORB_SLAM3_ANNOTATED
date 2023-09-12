@@ -396,7 +396,7 @@ std::ostream &operator<<(std::ostream &out, const Bias &b)
 
 void Calib::Set(const Sophus::SE3<float> &sophTbc, const float &ng, const float &na, const float &ngw, const float &naw)
 {
-    mbIsSet = true; // 置 mbIsSet 位代表执行过本方法
+    mbIsSet = true; // 置 mbIsSet 位代表执行过本函数
     const float ng2 = ng * ng;
     const float na2 = na * na;
     const float ngw2 = ngw * ngw;

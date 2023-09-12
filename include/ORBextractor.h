@@ -109,7 +109,7 @@ protected:
     /**
      * @brief 计算图像金字塔，并将计算结果赋值到 mvImagePyramid
      * 
-     * @bug 该方法与预期不一致！实际上 mvImagePyramid 单纯为缩放后的图像，没有真正对边界进行填充
+     * @bug 该函数与预期不一致！实际上 mvImagePyramid 单纯为缩放后的图像，没有真正对边界进行填充
      * 
      * @param[in] image 图像
     */
@@ -132,7 +132,7 @@ protected:
     // void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint>> &allKeypoints); // 没用
 
 
-// 以下所有变量全部在构造方法中被计算和赋值，并且不会再发生改变
+// 以下所有变量全部在构造函数中被计算和赋值，并且不会再发生改变
     std::vector<cv::Point> pattern; // 
 
     int nfeatures;      // 关键点提取数量（默认 1200）

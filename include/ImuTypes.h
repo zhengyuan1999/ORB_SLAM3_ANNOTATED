@@ -145,7 +145,7 @@ public:
     Sophus::SE3<float> mTbc; // 相机坐标系到IMU 坐标系的变换矩阵
     Eigen::DiagonalMatrix<float, 6> Cov;     // IMU 测量数据的协方差矩阵
     Eigen::DiagonalMatrix<float, 6> CovWalk; // IMU 偏置随机游走的协方差矩阵
-    bool mbIsSet; // 对象是否直接或间接调用过 Set 方法（就是上面四个对象是否被正确设置）
+    bool mbIsSet; // 对象是否直接或间接调用过 Set 函数（就是上面四个对象是否被正确设置）
 };
 
 

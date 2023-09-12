@@ -64,7 +64,7 @@ public:
 private:
 
     /**
-     * @brief 解算出 RANSAC 集合所有单应矩阵 H21，并通过方法参数返回得分最高者
+     * @brief 解算出 RANSAC 集合所有单应矩阵 H21，并通过函数参数返回得分最高者
      * 
      * @param[out] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为最优单应矩阵的内点
      * @param[out] score 最优的得分
@@ -73,7 +73,7 @@ private:
     void FindHomography(std::vector<bool> &vbMatchesInliers, float &score, Eigen::Matrix3f &H21);
     
     /**
-     * @brief 解算出 RANSAC 集合所有基础矩阵 F21，并通过方法参数返回得分最高者
+     * @brief 解算出 RANSAC 集合所有基础矩阵 F21，并通过函数参数返回得分最高者
      * 
      * @param[out] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为最优基础矩阵的内点
      * @param[out] score 最优的得分
@@ -196,7 +196,7 @@ private:
     std::vector<bool> mvbMatched1;  // 存储着 Frame 1 的关键点是否匹配到了 Frame 2 的关键点
 
 
-// mk、mSigma、mSigma2 和 mMaxIterations 只在构造方法中被赋值
+// mk、mSigma、mSigma2 和 mMaxIterations 只在构造函数中被赋值
     Eigen::Matrix3f mK;    // 相机内参矩阵（Calibration）
     float mSigma, mSigma2; // 标准差和方差（Standard Deviation and Variance）
     int mMaxIterations;    // RANSAC 算法最大迭代次数（Ransac max iterations）

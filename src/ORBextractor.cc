@@ -1286,7 +1286,7 @@ int ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoin
         int i = 0;
         for (vector<KeyPoint>::iterator keypoint = keypoints.begin(), keypointEnd = keypoints.end(); keypoint != keypointEnd; ++keypoint)
         {
-            // 修改方法 ComputePyramid 后，应该将关键点坐标拉回到真正图像的坐标系（而不是 Padding 后图像的坐标系）
+            // 修改函数 ComputePyramid 后，应该将关键点坐标拉回到真正图像的坐标系（而不是 Padding 后图像的坐标系）
             // keypoint->pt.x -= EDGE_THRESHOLD;
             // keypoint->pt.y -= EDGE_THRESHOLD;
 
@@ -1365,7 +1365,7 @@ void ORBextractor::ComputePyramid(cv::Mat image)
 }
 
 /**
- * 使用本方法时，需要在 () 运算符重载方法中将注释的两行放开，放开后，
+ * 使用本函数时，需要在 () 运算符重载函数中将注释的两行放开，放开后，
  * 单目相机没有问题，但是 Frame::ComputeStereoMatches() 直接使用了
  * mvImagePyramid，使用双目相机运行的话会出现段错误！！！不继续修改这
  * 个 BUG 是因为提取了边界关键点反而使得系统不稳定，绝大部分的边界关
