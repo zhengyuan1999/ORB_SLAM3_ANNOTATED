@@ -43,9 +43,7 @@ const float GRAVITY_VALUE = 9.81;
 
 
 
-/**
- * @brief IMU 测量点（陀螺仪、加速度计和时间戳）（IMU measurement (gyro, accelerometer and timestamp)）
-*/
+// IMU 测量点（陀螺仪、加速度计和时间戳）（IMU measurement (gyro, accelerometer and timestamp)）
 class Point
 {
 public:
@@ -58,8 +56,8 @@ public:
     : a(Acc.x, Acc.y, Acc.z), w(Gyro.x, Gyro.y, Gyro.z), t(timestamp) {}
 
 public:
-    Eigen::Vector3f a; // 三轴加速度
-    Eigen::Vector3f w; // 三轴角速度
+    Eigen::Vector3f a; // 加速度计测量数据
+    Eigen::Vector3f w; // 陀螺仪测量数据
     double t;          // 时间戳
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -67,9 +65,7 @@ public:
 
 
 
-/**
- * @brief IMU 偏置类（IMU biases (gyro and accelerometer)）
-*/
+// IMU 偏置类（IMU biases (gyro and accelerometer)）
 class Bias
 {
     friend class boost::serialization::access;
@@ -96,33 +92,34 @@ public:
     /**
      * @brief 复制 b
      * 
-     * @param[in] 被复制的 IMU 偏置对象
+     * @param[in] b 被复制的 IMU 偏置对象
     */
     void CopyFrom(Bias &b);
 
     friend std::ostream &operator<<(std::ostream &out, const Bias &b);
 
 public:
-    float bax, bay, baz; // 三轴加速度的偏置 bias
-    float bwx, bwy, bwz; // 三轴减速度的偏置 bias
+    float bax, bay, baz; // 加速度计三个轴上的偏置 bias
+    float bwx, bwy, bwz; // 陀螺仪三个轴上的偏置 bias
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 
 
-// IMU calibration (Tbc, Tcb, noise)
+// IMU 标定类（IMU calibration (Tbc, Tcb, noise)）
 class Calib
 {
     friend class boost::serialization::access;
+    
     template <class Archive>
     void serialize(Archive &ar, const unsigned int version)
     {
         serializeSophusSE3(ar, mTcb, version);
         serializeSophusSE3(ar, mTbc, version);
 
-        ar &boost::serialization::make_array(Cov.diagonal().data(), Cov.diagonal().size());
-        ar &boost::serialization::make_array(CovWalk.diagonal().data(), CovWalk.diagonal().size());
+        ar & boost::serialization::make_array(Cov.diagonal().data(), Cov.diagonal().size());
+        ar & boost::serialization::make_array(CovWalk.diagonal().data(), CovWalk.diagonal().size());
 
         ar & mbIsSet;
     }
@@ -159,19 +156,21 @@ public:
     IntegratedRotation(const Eigen::Vector3f &angVel, const Bias &imuBias, const float &time);
 
 public:
-    float deltaT; // integration time
-    Eigen::Matrix3f deltaR;
-    Eigen::Matrix3f rightJ; // right jacobian
+    // float deltaT; // 没用到（integration time）
+    Eigen::Matrix3f deltaR; // 预积分旋转测量值
+    Eigen::Matrix3f rightJ; // Jr( Log(deltaR) )（right jacobian）
     
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 
 
 
-// Preintegration of Imu Measurements
+// IMU 预积分类（Preintegration of Imu Measurements）
 class Preintegrated
 {
+    // 侵入式序列化
     friend class boost::serialization::access;
+
     template <class Archive>
     void serialize(Archive &ar, const unsigned int version)
     {
@@ -210,33 +209,56 @@ public:
     void Initialize(const Bias &b_);
 
     /**
-     * @brief 计算预积分，更新噪声
+     * @brief j-1 时刻的 IMU 数据到来，更新预积分数据（i 到 j-1 -> i 到 j）
      * 
-     * @param[in] acceleration 加速度
-     * @param[in] angVel 角速度
-     * @param[in] dt 两个关键帧之间的时间差
+     * @param[in] acceleration 加速度计数据
+     * @param[in] angVel 陀螺仪数据
+     * @param[in] dt 时间间隔
     */
     void IntegrateNewMeasurement(const Eigen::Vector3f &acceleration, const Eigen::Vector3f &angVel, const float &dt);
     void Reintegrate();
     void MergePrevious(Preintegrated *pPrev);
+
+    // 设置新偏置成员变量 bu 为 bu_，并计算偏置变化成员变量 db = bu - b
     void SetNewBias(const Bias &bu_);
+
+    // return IMU::Bias(b_.bax - b.bax, b_.bay - b.bay, b_.baz - b.baz, b_.bwx - b.bwx, b_.bwy - b.bwy, b_.bwz - b.bwz);
     IMU::Bias GetDeltaBias(const Bias &b_);
 
+    // 公式（1.15-56）
     Eigen::Matrix3f GetDeltaRotation(const Bias &b_);
+
+    // 公式（1.15-57）
     Eigen::Vector3f GetDeltaVelocity(const Bias &b_);
+
+    // 公式（1.15-58）
     Eigen::Vector3f GetDeltaPosition(const Bias &b_);
 
+    // 公式（1.15-56）
     Eigen::Matrix3f GetUpdatedDeltaRotation();
+
+    // 公式（1.15-57）
     Eigen::Vector3f GetUpdatedDeltaVelocity();
+
+    // 公式（1.15-58）
     Eigen::Vector3f GetUpdatedDeltaPosition();
 
+    // return dR;
     Eigen::Matrix3f GetOriginalDeltaRotation();
+
+    // return dV;
     Eigen::Vector3f GetOriginalDeltaVelocity();
+
+    // return dP;
     Eigen::Vector3f GetOriginalDeltaPosition();
 
+    // return db;
     Eigen::Matrix<float, 6, 1> GetDeltaBias();
 
+    // return b;
     Bias GetOriginalBias();
+
+    // return bu;
     Bias GetUpdatedBias();
 
     void printMeasurements() const
@@ -250,24 +272,28 @@ public:
     }
 
 public:
-    float dT;
+    float dT; // i 到 j-1 的总时长
     Eigen::Matrix<float, 15, 15> C;
-    Eigen::Matrix<float, 15, 15> Info;
-    Eigen::DiagonalMatrix<float, 6> Nga, NgaWalk;
+    Eigen::Matrix<float, 15, 15> Info; // i 到 j-1 的信息矩阵
+    Eigen::DiagonalMatrix<float, 6> Nga, NgaWalk; // IMU 测量数据和偏置随机游走的协方差矩阵
 
-    // Values for the original bias (when integration was computed)
-    Bias b;
-    Eigen::Matrix3f dR;
-    Eigen::Vector3f dV, dP;
-    Eigen::Matrix3f JRg, JVg, JVa, JPg, JPa;
-    Eigen::Vector3f avgA, avgW;
+    Bias b; // 原偏置（Values for the original bias (when integration was computed)）
+
+    Eigen::Matrix3f dR;  // i 到 j-1 的预积分旋转测量值（测量值就是公式里上面带波浪线那个）
+    Eigen::Vector3f dV;  // i 到 j-1 的预积分旋转测量值
+    Eigen::Vector3f dP;  // i 到 j-1 的预积分位置测量值
+    Eigen::Matrix3f JRg; // i 到 j-1 的预积分旋转测量值对陀螺仪偏置的雅可比矩阵
+    Eigen::Matrix3f JVg; // i 到 j-1 的预积分速度测量值对陀螺仪偏置的雅可比矩阵
+    Eigen::Matrix3f JVa; // i 到 j-1 的预积分速度测量值对加速度计偏置的雅可比矩阵
+    Eigen::Matrix3f JPg; // i 到 j-1 的预积分位置测量值对陀螺仪偏置的雅可比矩阵
+    Eigen::Matrix3f JPa; // i 到 j-1 的预积分位置测量值对加速度计偏置的雅可比矩阵
+    Eigen::Vector3f avgA, avgW; // 平均加速度和平均角速度
 
 private:
-    // Updated bias
-    Bias bu;
-    // Dif between original and updated bias
-    // This is used to compute the updated values of the preintegration
-    Eigen::Matrix<float, 6, 1> db;
+    Bias bu; // 更新后的偏置（Updated bias）
+
+    // Dif between original and updated bias. This is used to compute the updated values of the preintegration
+    Eigen::Matrix<float, 6, 1> db; // 偏置变化量 = 更新后的偏置 - 原偏置
 
     struct integrable
     {
@@ -286,56 +312,27 @@ private:
         float t;
     };
 
-    std::vector<integrable> mvMeasurements;
+    std::vector<integrable> mvMeasurements; // 保存从 i 到 j-1 所有的 IMU 测量数据
 
     std::mutex mMutex;
 };
 
 
 // Lie Algebra Functions
-/**
- * @brief 求 so(3) 右雅可比 Jr
- * 
- * @param[in] x so(3) 第一个分量
- * @param[in] y so(3) 第二个分量
- * @param[in] z so(3) 第三个分量
- * 
- * @return 右雅可比 Jr
-*/
+
+// 公式（1.15-8）：计算右雅可比 Jr( (x, y, z)^T )，(x, y, z)^T ∈ so(3)
 Eigen::Matrix3f RightJacobianSO3(const float &x, const float &y, const float &z);
 
-/**
- * @brief 求 so(3) 右雅可比 Jr
- * 
- * @param[in] v ∈ so(3)
- * 
- * @return 右雅可比 Jr
-*/
+// 公式（1.15-8）：计算右雅可比 Jr(v)，v ∈ so(3)
 Eigen::Matrix3f RightJacobianSO3(const Eigen::Vector3f &v);
 
-/**
- * @brief 求 so(3) 右雅可比 Jr
- * 
- * @param[in] x so(3) 第一个分量
- * @param[in] y so(3) 第二个分量
- * @param[in] z so(3) 第三个分量
- * 
- * @return 右雅可比 Jr
-*/
+// 公式（1.15-9）：计算右雅可比的逆 ( Jr(v) )^-1，v ∈ so(3)
 Eigen::Matrix3f InverseRightJacobianSO3(const float &x, const float &y, const float &z);
 
-/**
- * @brief 求 so(3) 右雅可比 Jr
- * 
- * @param[in] v ∈ so(3)
- * 
- * @return 右雅可比 Jr
-*/
+// 公式（1.15-9）：计算右雅可比的逆 ( Jr( (x, y, z)^T ) )^-1，(x, y, z)^T ∈ so(3)
 Eigen::Matrix3f InverseRightJacobianSO3(const Eigen::Vector3f &v);
 
-/**
- * @return U * V^T（R = U * diag * V^T）
-*/
+// return svd.matrixU() * svd.matrixV().transpose();
 Eigen::Matrix3f NormalizeRotation(const Eigen::Matrix3f &R);
 
 }

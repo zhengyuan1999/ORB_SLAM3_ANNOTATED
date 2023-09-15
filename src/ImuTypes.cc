@@ -18,9 +18,7 @@
 
 #include "ImuTypes.h"
 #include "Converter.h"
-
 #include "GeometricTools.h"
-
 #include <iostream>
 
 namespace ORB_SLAM3
@@ -34,6 +32,8 @@ const float eps = 1e-4;
 Eigen::Matrix3f NormalizeRotation(const Eigen::Matrix3f &R)
 {
     Eigen::JacobiSVD<Eigen::Matrix3f> svd(R, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    // U：列由 AA^t 的特征向量组成，且特征向量为单位向量
+    // V：列由 A^t *A 的特征向量组成，且特征向量为单位向量
     return svd.matrixU() * svd.matrixV().transpose();
 }
 
@@ -118,10 +118,11 @@ Preintegrated::Preintegrated(const Bias &b_, const Calib &calib)
 }
 
 // Copy constructor
-Preintegrated::Preintegrated(Preintegrated *pImuPre) : dT(pImuPre->dT), C(pImuPre->C), Info(pImuPre->Info),
-                                                        Nga(pImuPre->Nga), NgaWalk(pImuPre->NgaWalk), b(pImuPre->b), dR(pImuPre->dR), dV(pImuPre->dV),
-                                                        dP(pImuPre->dP), JRg(pImuPre->JRg), JVg(pImuPre->JVg), JVa(pImuPre->JVa), JPg(pImuPre->JPg), JPa(pImuPre->JPa),
-                                                        avgA(pImuPre->avgA), avgW(pImuPre->avgW), bu(pImuPre->bu), db(pImuPre->db), mvMeasurements(pImuPre->mvMeasurements)
+Preintegrated::Preintegrated(Preintegrated *pImuPre)
+: dT(pImuPre->dT), C(pImuPre->C), Info(pImuPre->Info),
+Nga(pImuPre->Nga), NgaWalk(pImuPre->NgaWalk), b(pImuPre->b), dR(pImuPre->dR), dV(pImuPre->dV),
+dP(pImuPre->dP), JRg(pImuPre->JRg), JVg(pImuPre->JVg), JVa(pImuPre->JVa), JPg(pImuPre->JPg), JPa(pImuPre->JPa),
+avgA(pImuPre->avgA), avgW(pImuPre->avgW), bu(pImuPre->bu), db(pImuPre->db), mvMeasurements(pImuPre->mvMeasurements)
 {
 }
 
@@ -175,7 +176,9 @@ void Preintegrated::Reintegrate()
     const std::vector<integrable> aux = mvMeasurements;
     Initialize(bu);
     for (size_t i = 0; i < aux.size(); i++)
+    {
         IntegrateNewMeasurement(aux[i].a, aux[i].w, aux[i].t);
+    }
 }
 
 void Preintegrated::IntegrateNewMeasurement(const Eigen::Vector3f &acceleration, const Eigen::Vector3f &angVel, const float &dt)
@@ -186,7 +189,6 @@ void Preintegrated::IntegrateNewMeasurement(const Eigen::Vector3f &acceleration,
     // Velocity is updated secondly, as it depends on previously computed rotation.
     // Rotation is the last to be updated.
 
-    // Matrices to compute covariance
     Eigen::Matrix<float, 9, 9> A;
     A.setIdentity();
     Eigen::Matrix<float, 9, 6> B;
@@ -199,48 +201,62 @@ void Preintegrated::IntegrateNewMeasurement(const Eigen::Vector3f &acceleration,
     avgA = (dT * avgA + dR * acc * dt) / (dT + dt);
     avgW = (dT * avgW + accW * dt) / (dT + dt);
 
-    // Update delta position dP and velocity dV (rely on no-updated delta rotation)
+
+// 更新预积分位置、速度测量值（Update delta position dP and velocity dV (rely on no-updated delta rotation)）
+    // dP 的更新用到了 i 到 j-1 的预积分速度、位置测量值，所以最先更新 dP
     dP = dP + dV * dt + 0.5f * dR * acc * dt * dt;
+    // dV 的更新用到了 i 到 j-1 的预积分旋转测量值，所以接下来更新 dV
     dV = dV + dR * acc * dt;
 
-    // Compute velocity and position parts of matrices A and B (rely on non-updated delta rotation)
+
+// 公式（1.15-48）：计算协方差矩阵 A B 使用了 i 到 j-1 的数据的部分（Matrices to compute covariance）
+// Compute velocity and position parts of matrices A and B (rely on non-updated delta rotation)
     Eigen::Matrix<float, 3, 3> Wacc = Sophus::SO3f::hat(acc);
 
+    // 这里暂时没有向 A.block<3, 3>(0, 0) 写入 j-1 到 j 的预积分旋转测量值，因为还没有更新
     A.block<3, 3>(3, 0) = -dR * dt * Wacc;
     A.block<3, 3>(6, 0) = -0.5f * dR * dt * dt * Wacc;
     A.block<3, 3>(6, 3) = Eigen::DiagonalMatrix<float, 3>(dt, dt, dt);
     B.block<3, 3>(3, 3) = dR * dt;
     B.block<3, 3>(6, 3) = 0.5f * dR * dt * dt;
 
-    // Update position and velocity jacobians wrt bias correction
+
+// 下面四个变量都用到了 i 到 j-1 的预积分旋转测量值，而且 JPa 和 JPg 的更新依赖于 i 到 j-1 的 JVa 和 JVg（注意先后顺序）
+// Update position and velocity jacobians wrt bias correction
     JPa = JPa + JVa * dt - 0.5f * dR * dt * dt;
     JPg = JPg + JVg * dt - 0.5f * dR * dt * dt * Wacc * JRg;
     JVa = JVa - dR * dt;
     JVg = JVg - dR * dt * Wacc * JRg;
 
-    // Update delta rotation
-    IntegratedRotation dRi(angVel, b, dt);
-    dR = NormalizeRotation(dR * dRi.deltaR);
 
-    // Compute rotation parts of matrices A and B
+// 更新 dR 为 i 到 j 的预积分旋转测量值（Update delta rotation）
+    IntegratedRotation dRi(angVel, b, dt);
+    dR = NormalizeRotation(dR * dRi.deltaR); // 强行归一化，使其符合旋转矩阵的性质
+
+
+// 公式（1.15-48）：dR 已经更新，完成对 A 和 B 的更新（Compute rotation parts of matrices A and B）
     A.block<3, 3>(0, 0) = dRi.deltaR.transpose();
     B.block<3, 3>(0, 0) = dRi.rightJ * dt;
 
-    // Update covariance
+
+// 将已经计算好的 A B 写入 C（Update covariance） 
     C.block<9, 9>(0, 0) = A * C.block<9, 9>(0, 0) * A.transpose() + B * Nga * B.transpose();
     C.block<6, 6>(9, 9) += NgaWalk;
 
-    // Update rotation jacobian wrt bias correction
+
+// 更新 JRg 为 i 到 j 的预积分旋转测量值对陀螺仪偏置的雅可比矩阵（Update rotation jacobian wrt bias correction）
     JRg = dRi.deltaR.transpose() * JRg - dRi.rightJ * dt;
 
-    // Total integrated time
-    dT += dt;
+
+    dT += dt; // Total integrated time
 }
 
 void Preintegrated::MergePrevious(Preintegrated *pPrev)
 {
     if (pPrev == this)
+    {
         return;
+    }
 
     std::unique_lock<std::mutex> lock1(mMutex);
     std::unique_lock<std::mutex> lock2(pPrev->mMutex);
@@ -257,9 +273,14 @@ void Preintegrated::MergePrevious(Preintegrated *pPrev)
 
     Initialize(bav);
     for (size_t i = 0; i < aux1.size(); i++)
+    {
         IntegrateNewMeasurement(aux1[i].a, aux1[i].w, aux1[i].t);
+    }
+
     for (size_t i = 0; i < aux2.size(); i++)
+    {
         IntegrateNewMeasurement(aux2[i].a, aux2[i].w, aux2[i].t);
+    }
 }
 
 void Preintegrated::SetNewBias(const Bias &bu_)

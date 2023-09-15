@@ -1,3 +1,10 @@
+# 注释参考
+
+1. 程小六《视觉惯性 SLAM：理论与源码解析》
+2. On-Manifold Preintegration for Real-Time Visual-Inertial Odometry
+
+---
+
 # ORB-SLAM3
 
 ### V1.0, December 22th, 2021
