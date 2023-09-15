@@ -116,7 +116,7 @@ public:
     /**
      * @brief 初始化 SLAM 系统，启动所有线程（局部建图线程、回环检测线程和可视化线程）
      * 
-     * @param[in] strVocFile 字典路径
+     * @param[in] strVocFile 词典路径
      * @param[in] strSettingsFile 配置文件路径
      * @param[in] sensor 输入传感器类型
      * @param[in] bUseViewer 是否是开启可视化

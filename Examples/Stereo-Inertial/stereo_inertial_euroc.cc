@@ -43,7 +43,7 @@ int main(int argc, char **argv)
         cerr << endl
              << "Usage: "
              << "./stereo_inertial_euroc "   // 运行的示例程序，在这里就是：ORB_SLAM3/Examples/Stereo-Inertial/stereo_inertial_euroc
-             << "path_to_vocabulary "        // 字典路径，可以使用自己训练的字典，自带的字典路径：ORB_SLAM3/Vocabulary/ORBvoc.txt
+             << "path_to_vocabulary "        // 词典路径，可以使用自己训练的词典，自带的词典路径：ORB_SLAM3/Vocabulary/ORBvoc.txt
              << "path_to_settings "          // 配置文件路径，在这里就是：ORB_SLAM3/Examples/Stereo-Inertial/EuRoC.yaml
              << "path_to_sequence_folder_1 " // 数据集路径，例如：MH_01_easy/、MH_02_easy/ 等
              << "path_to_times_file_1 "      // 时间戳文件路径，例如：ORB_SLAM3/Examples/Stereo-Inertial/EuRoC_TimeStamps/MH01.txt
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM3::System SLAM(
         argv[1],                       // 配置文件路径
-        argv[2],                       // 字典路径
+        argv[2],                       // 词典路径
         ORB_SLAM3::System::IMU_STEREO, // 输入传感器类型
         // false                       // 是否开启可视化
         true

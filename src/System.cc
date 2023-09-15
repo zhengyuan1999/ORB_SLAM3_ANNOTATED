@@ -105,10 +105,12 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     // bool loadedAtlas = false; // 这个变量没用
 
-    // 加载字典（Load ORB Vocabulary）
+    // 加载词典（Load ORB Vocabulary）
     cout << endl << "Loading ORB Vocabulary. This could take a while..." << endl;
     mpVocabulary = new ORBVocabulary();
     bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
+    // 想看看 DBoW2 save load 的 yaml 格式
+    // mpVocabulary->save("Vocabulary/ORBvoc.yaml");
     if (!bVocLoad)
     {
         cerr << "Wrong path to vocabulary. " << endl;
@@ -198,7 +200,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     cout << "Seq. Name: " << strSequence << endl;
     mpTracker = new Tracking(
         this,               // SLAM 系统（对象）指针
-        mpVocabulary,       // 字典指针
+        mpVocabulary,       // 词典指针
         mpFrameDrawer,      // 帧绘制器指针
         mpMapDrawer,        // 地图绘制器指针
         mpAtlas,            // 地图指针
@@ -236,7 +238,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpLoopCloser = new LoopClosing(
         mpAtlas,              // 地图指针
         mpKeyFrameDatabase,   // 关键帧数据库指针
-        mpVocabulary,         // 字典指针
+        mpVocabulary,         // 词典指针
         mSensor != MONOCULAR, // 是否固定尺度
         activeLC              // 是否进行回环检测
     ); // mSensor!=MONOCULAR);
