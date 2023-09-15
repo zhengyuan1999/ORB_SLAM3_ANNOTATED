@@ -216,7 +216,11 @@ public:
      * @param[in] dt 时间间隔
     */
     void IntegrateNewMeasurement(const Eigen::Vector3f &acceleration, const Eigen::Vector3f &angVel, const float &dt);
+
+    // 由于偏置被更新而重新积分
     void Reintegrate();
+
+    // 由于关键帧被删除，需要将前后两段预积分融合
     void MergePrevious(Preintegrated *pPrev);
 
     // 设置新偏置成员变量 bu 为 bu_，并计算偏置变化成员变量 db = bu - b
@@ -273,9 +277,10 @@ public:
 
 public:
     float dT; // i 到 j-1 的总时长
-    Eigen::Matrix<float, 15, 15> C;
-    Eigen::Matrix<float, 15, 15> Info; // i 到 j-1 的信息矩阵
-    Eigen::DiagonalMatrix<float, 6> Nga, NgaWalk; // IMU 测量数据和偏置随机游走的协方差矩阵
+    Eigen::Matrix<float, 15, 15> C; // i 到 j-1 的信息矩阵
+    Eigen::Matrix<float, 15, 15> Info; // 这个没用上
+    Eigen::DiagonalMatrix<float, 6> Nga; // IMU 测量协方差矩阵
+    Eigen::DiagonalMatrix<float, 6> NgaWalk; // IMU 偏置随机游走的协方差矩阵
 
     Bias b; // 原偏置（Values for the original bias (when integration was computed)）
 

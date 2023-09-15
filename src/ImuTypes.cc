@@ -173,6 +173,7 @@ void Preintegrated::Initialize(const Bias &b_)
 void Preintegrated::Reintegrate()
 {
     std::unique_lock<std::mutex> lock(mMutex);
+
     const std::vector<integrable> aux = mvMeasurements;
     Initialize(bu);
     for (size_t i = 0; i < aux.size(); i++)
@@ -204,9 +205,9 @@ void Preintegrated::IntegrateNewMeasurement(const Eigen::Vector3f &acceleration,
 
 // 更新预积分位置、速度测量值（Update delta position dP and velocity dV (rely on no-updated delta rotation)）
     // dP 的更新用到了 i 到 j-1 的预积分速度、位置测量值，所以最先更新 dP
-    dP = dP + dV * dt + 0.5f * dR * acc * dt * dt;
+    dP = dP + dV * dt + 0.5f * dR * acc * dt * dt; // 公式（1.15-43）
     // dV 的更新用到了 i 到 j-1 的预积分旋转测量值，所以接下来更新 dV
-    dV = dV + dR * acc * dt;
+    dV = dV + dR * acc * dt; // 公式（1.15-22）
 
 
 // 公式（1.15-48）：计算协方差矩阵 A B 使用了 i 到 j-1 的数据的部分（Matrices to compute covariance）
@@ -223,13 +224,13 @@ void Preintegrated::IntegrateNewMeasurement(const Eigen::Vector3f &acceleration,
 
 // 下面四个变量都用到了 i 到 j-1 的预积分旋转测量值，而且 JPa 和 JPg 的更新依赖于 i 到 j-1 的 JVa 和 JVg（注意先后顺序）
 // Update position and velocity jacobians wrt bias correction
-    JPa = JPa + JVa * dt - 0.5f * dR * dt * dt;
-    JPg = JPg + JVg * dt - 0.5f * dR * dt * dt * Wacc * JRg;
-    JVa = JVa - dR * dt;
-    JVg = JVg - dR * dt * Wacc * JRg;
+    JPa = JPa + JVa * dt - 0.5f * dR * dt * dt;              // 公式（1.15-67）
+    JPg = JPg + JVg * dt - 0.5f * dR * dt * dt * Wacc * JRg; // 公式（1.15-66）
+    JVa = JVa - dR * dt;                                     // 公式（1.15-62）
+    JVg = JVg - dR * dt * Wacc * JRg;                        // 公式（1.15-63）
 
 
-// 更新 dR 为 i 到 j 的预积分旋转测量值（Update delta rotation）
+// 公式（1.15-29）：更新 dR 为 i 到 j 的预积分旋转测量值（Update delta rotation）
     IntegratedRotation dRi(angVel, b, dt);
     dR = NormalizeRotation(dR * dRi.deltaR); // 强行归一化，使其符合旋转矩阵的性质
 
@@ -239,12 +240,13 @@ void Preintegrated::IntegrateNewMeasurement(const Eigen::Vector3f &acceleration,
     B.block<3, 3>(0, 0) = dRi.rightJ * dt;
 
 
-// 将已经计算好的 A B 写入 C（Update covariance） 
-    C.block<9, 9>(0, 0) = A * C.block<9, 9>(0, 0) * A.transpose() + B * Nga * B.transpose();
+// 将已经计算好的 A B 写入 C（Update covariance）
+    C.block<9, 9>(0, 0) = A * C.block<9, 9>(0, 0) * A.transpose() + B * Nga * B.transpose(); // 公式（1.15-51）
     C.block<6, 6>(9, 9) += NgaWalk;
 
 
-// 更新 JRg 为 i 到 j 的预积分旋转测量值对陀螺仪偏置的雅可比矩阵（Update rotation jacobian wrt bias correction）
+// 公式（1.15-63）：更新 JRg 为 i 到 j 的预积分旋转测量值对陀螺仪偏置的雅可比矩阵
+// Update rotation jacobian wrt bias correction
     JRg = dRi.deltaR.transpose() * JRg - dRi.rightJ * dt;
 
 
@@ -260,18 +262,19 @@ void Preintegrated::MergePrevious(Preintegrated *pPrev)
 
     std::unique_lock<std::mutex> lock1(mMutex);
     std::unique_lock<std::mutex> lock2(pPrev->mMutex);
-    Bias bav;
-    bav.bwx = bu.bwx;
-    bav.bwy = bu.bwy;
-    bav.bwz = bu.bwz;
-    bav.bax = bu.bax;
-    bav.bay = bu.bay;
-    bav.baz = bu.baz;
+    // Bias bav; // 多余新建一个偏置对象再传给 Initialize
+    // bav.bwx = bu.bwx;
+    // bav.bwy = bu.bwy;
+    // bav.bwz = bu.bwz;
+    // bav.bax = bu.bax;
+    // bav.bay = bu.bay;
+    // bav.baz = bu.baz;
 
     const std::vector<integrable> aux1 = pPrev->mvMeasurements;
     const std::vector<integrable> aux2 = mvMeasurements;
 
-    Initialize(bav);
+    // Initialize(bav);
+    Initialize(bu);
     for (size_t i = 0; i < aux1.size(); i++)
     {
         IntegrateNewMeasurement(aux1[i].a, aux1[i].w, aux1[i].t);
