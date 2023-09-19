@@ -34,22 +34,22 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /**
-     * @brief 计算 KeyFrame 2 到 KeyFrame 1 的基础矩阵 F12（Compute the Fundamental matrix between KF1 and KF2）
+     * @brief 计算 KeyFrame2 到 KeyFrame1 的基础矩阵 F12（Compute the Fundamental matrix between KF1 and KF2）
      * 
-     * @param[in] pKF1 KeyFrame 1
-     * @param[in] pKF2 KeyFrame 2
+     * @param[in] pKF1 KeyFrame1
+     * @param[in] pKF2 KeyFrame2
      * 
-     * @return KeyFrame 2 到 KeyFrame 1 的基础矩阵 F12
+     * @return KeyFrame2 到 KeyFrame1 的基础矩阵 F12
     */
     static Eigen::Matrix3f ComputeF12(KeyFrame *&pKF1, KeyFrame *&pKF2);
 
     /**
      * @brief 给定一对匹配关键点和这两帧的投影矩阵 [R|t] 三角化恢复路标点（Triangulate point with KF1 and KF2）
      * 
-     * @param x_c1 来自 Frame 1 的关键点 [x1, y1, 1]
-     * @param x_c2 来自 Frame 2 的关键点 [x2, y2, 1]
-     * @param Tc1w Frame 1 的投影矩阵
-     * @param Tc2w Frame 2 的投影矩阵
+     * @param x_c1 来自 Frame1 的关键点 [x1, y1, 1]
+     * @param x_c2 来自 Frame2 的关键点 [x2, y2, 1]
+     * @param Tc1w Frame1 的投影矩阵
+     * @param Tc2w Frame2 的投影矩阵
      * @param x3D 恢复出来的路标点
      * 
      * @return 三角化是否成功

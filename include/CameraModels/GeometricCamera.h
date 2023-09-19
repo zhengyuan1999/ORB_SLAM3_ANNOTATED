@@ -65,18 +65,32 @@ public:
     // 显示定义默认析构函数
     ~GeometricCamera() {}
 
+    // 一堆投影成员函数
     virtual cv::Point2f project(const cv::Point3f &p3D) = 0;
     virtual Eigen::Vector2d project(const Eigen::Vector3d &v3D) = 0;
     virtual Eigen::Vector2f project(const Eigen::Vector3f &v3D) = 0;
     virtual Eigen::Vector2f projectMat(const cv::Point3f &p3D) = 0;
 
+    // 这是干啥的？不确定性？
     virtual float uncertainty2(const Eigen::Matrix<double, 2, 1> &p2D) = 0;
 
+    // 两个反向投影
     virtual Eigen::Vector3f unprojectEig(const cv::Point2f &p2D) = 0;
     virtual cv::Point3f unproject(const cv::Point2f &p2D) = 0;
 
+    // 因变量（投影到相机上的像素点）对自变量（路标点）的雅可比
     virtual Eigen::Matrix<double, 2, 3> projectJac(const Eigen::Vector3d &v3D) = 0;
 
+    /**
+     * @brief 恢复运动结构
+     * 
+     * @param[in] vKeys1 Frame1 的关键点 vector
+     * @param[in] vKeys2 Frame2 的关键点 vector
+     * @param[in] vMatches12 其索引与 vKeys1 相对应，索引内容为与之匹配的关键点在 vKeys2 的索引
+     * @param[out] T21 通过匹配的关键点恢复出来运动结构 T21
+     * @param[out] vP3D 其索引与 vKeys1 相对应，索引内容为该关键点恢复出的路标点
+     * @param[out] vbTriangulated 其索引与 vKeys1 相对应，索引内容为该关键点是否恢复出路标点
+    */
     virtual bool ReconstructWithTwoViews(const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2, const std::vector<int> &vMatches12,
             Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated) = 0;
 

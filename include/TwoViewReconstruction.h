@@ -29,8 +29,8 @@ namespace ORB_SLAM3
 
 class TwoViewReconstruction
 {
-    // 第一个 int 来自 Frame 1，保存着 mvKeys1 的索引
-    // 第二个 int 来自 Frame 2，保存着 mvKeys2 的索引
+    // 第一个 int 来自 Frame1，保存着 mvKeys1 的索引
+    // 第二个 int 来自 Frame2，保存着 mvKeys2 的索引
     typedef std::pair<int, int> Match;
 
 public:
@@ -38,7 +38,7 @@ public:
     
     // Fix the reference frame
     /**
-     * @brief 初始化成员对象
+     * @brief 初始化成员变量
      * 
      * @param[in] k 相机内参矩阵
      * @param[in] sigma 标准差
@@ -51,8 +51,8 @@ public:
     /**
      * @brief 同时计算基础矩阵和单应矩阵，并根据得分结果来选择使用哪个矩阵恢复运动结构
      * 
-     * @param[in] vKeys1 Frame 1 的关键点 vector
-     * @param[in] vKeys2 Frame 2 的关键点 vector
+     * @param[in] vKeys1 Frame1 的关键点 vector
+     * @param[in] vKeys2 Frame2 的关键点 vector
      * @param[in] vMatches12 其索引与 vKeys1 相对应，索引内容为与之匹配的关键点在 vKeys2 的索引
      * @param[out] T21 通过匹配的关键点恢复出来运动结构 T21
      * @param[out] vP3D 其索引与 vKeys1 相对应，索引内容为该关键点恢复出的路标点
@@ -84,8 +84,8 @@ private:
     /**
      * @brief 给定 8 点对计算单应矩阵
      * 
-     * @param[in] vP1 来自 Frame 1 的 8 个关键点
-     * @param[in] vP2 来自 Frame 2 的 8 个关键点，与 vP1 的关键点一一匹配
+     * @param[in] vP1 来自 Frame1 的 8 个关键点
+     * @param[in] vP2 来自 Frame2 的 8 个关键点，与 vP1 的关键点一一匹配
      * 
      * @return 解算出来的单应矩阵 H21
     */
@@ -94,8 +94,8 @@ private:
     /**
      * @brief 给定 8 点对计算基础矩阵
      * 
-     * @param[in] vP1 来自 Frame 1 的 8 个关键点
-     * @param[in] vP2 来自 Frame 2 的 8 个关键点，与 vP1 的关键点一一匹配
+     * @param[in] vP1 来自 Frame1 的 8 个关键点
+     * @param[in] vP2 来自 Frame2 的 8 个关键点，与 vP1 的关键点一一匹配
      * 
      * @return 解算出来的基础矩阵 F21
     */
@@ -128,7 +128,7 @@ private:
      * @brief 从给定的基础矩阵中恢复运动结构，并三角化恢复路标点
      * 
      * @param[in] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为 F21 的内点
-     * @param[in] F21 Frame 1 到 Frame 2 的基础矩阵
+     * @param[in] F21 Frame1 到 Frame2 的基础矩阵
      * @param[in] K 相机内参矩阵
      * @param[out] T21 通过基础矩阵恢复出来的变换矩阵
      * @param[out] vP3D 其索引与 mvKeys1 相对应，索引内容为该关键点恢复出的路标点
@@ -158,8 +158,8 @@ private:
      * 
      * @param[in] R 可能的旋转矩阵
      * @param[in] t 可能的位置向量
-     * @param[in] vKeys1 Frame 1 的关键点 vector
-     * @param[in] vKeys2 Frame 2 的关键点 vector
+     * @param[in] vKeys1 Frame1 的关键点 vector
+     * @param[in] vKeys2 Frame2 的关键点 vector
      * @param[in] vMatches12 索引与 vKeys1 相对应，索引内容为与之匹配的关键点在 vKeys2 的索引
      * @param[in] vbMatchesInliers 其索引与 mvMatches12 相对应，索引内容为该匹配是否为 F21 的内点
      * @param[in] K 相机内参矩阵
@@ -185,15 +185,15 @@ private:
 
 
 // mvKeys1、mvKeys2、mvMatches12 和 mvbMatched1 只在 Reconstruct 中被赋值
-    // 来自参考帧（Frame 1）的关键点 vector（Keypoints from Reference Frame (Frame 1)）
+    // 来自参考帧（Frame1）的关键点 vector（Keypoints from Reference Frame (Frame 1)）
     std::vector<cv::KeyPoint> mvKeys1;
 
-    // 来自当前帧（Frame 2）的关键点 vector（Keypoints from Current Frame (Frame 2)）
+    // 来自当前帧（Frame2）的关键点 vector（Keypoints from Current Frame (Frame 2)）
     std::vector<cv::KeyPoint> mvKeys2;
 
     // Current Matches from Reference to Current
-    std::vector<Match> mvMatches12; // 存储着 Frame 1 和 Frame 2 匹配的关键点对
-    std::vector<bool> mvbMatched1;  // 存储着 Frame 1 的关键点是否匹配到了 Frame 2 的关键点
+    std::vector<Match> mvMatches12; // 存储着 Frame1 和 Frame2 匹配的关键点对
+    std::vector<bool> mvbMatched1;  // 存储着 Frame1 的关键点是否匹配到了 Frame2 的关键点
 
 
 // mk、mSigma、mSigma2 和 mMaxIterations 只在构造函数中被赋值

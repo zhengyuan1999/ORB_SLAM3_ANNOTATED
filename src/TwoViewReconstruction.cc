@@ -444,7 +444,7 @@ float TwoViewReconstruction::CheckFundamental(const Eigen::Matrix3f &F21, vector
         // Reprojection error in second image
         // l2=F21x1=(a2,b2,c2)
 
-        // 通过 F21 * x1 构造 Frame 2 上的直线方程，理论上，正确匹配的 x2 应该严格在直线上
+        // 通过 F21 * x1 构造 Frame2 上的直线方程，理论上，正确匹配的 x2 应该严格在直线上
         const float a2 = f11 * u1 + f12 * v1 + f13;
         const float b2 = f21 * u1 + f22 * v1 + f23;
         const float c2 = f31 * u1 + f32 * v1 + f33;
@@ -880,7 +880,7 @@ int TwoViewReconstruction::CheckRT(const Eigen::Matrix3f &R, const Eigen::Vector
         float cosParallax = normal1.dot(normal2) / (dist1 * dist2);
 
         // Check depth in front of first camera (only if enough parallax, as "infinite" points can easily go to negative depth)
-        // 检查该路标点在 Frame 1 下的深度是否为正
+        // 检查该路标点在 Frame1 下的深度是否为正
         if (p3dC1(2) <= 0 && cosParallax < 0.99998)
             continue;
 

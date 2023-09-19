@@ -33,7 +33,7 @@ cv::Point2f Pinhole::project(const cv::Point3f &p3D)
     /**
      * x = fx * X / Z + cx
      * y = fy * X / Z + cy
-    */
+     */
     return cv::Point2f(
         mvParameters[0] * p3D.x / p3D.z + mvParameters[2],
         mvParameters[1] * p3D.y / p3D.z + mvParameters[3]
@@ -71,14 +71,20 @@ float Pinhole::uncertainty2(const Eigen::Matrix<double, 2, 1> &p2D)
 
 Eigen::Vector3f Pinhole::unprojectEig(const cv::Point2f &p2D)
 {
-    return Eigen::Vector3f((p2D.x - mvParameters[2]) / mvParameters[0], (p2D.y - mvParameters[3]) / mvParameters[1],
-                            1.f);
+    return Eigen::Vector3f(
+        (p2D.x - mvParameters[2]) / mvParameters[0],
+        (p2D.y - mvParameters[3]) / mvParameters[1],
+        1.f
+    );
 }
 
 cv::Point3f Pinhole::unproject(const cv::Point2f &p2D)
 {
-    return cv::Point3f((p2D.x - mvParameters[2]) / mvParameters[0], (p2D.y - mvParameters[3]) / mvParameters[1],
-                        1.f);
+    return cv::Point3f(
+        (p2D.x - mvParameters[2]) / mvParameters[0],
+        (p2D.y - mvParameters[3]) / mvParameters[1],
+        1.f
+    );
 }
 
 Eigen::Matrix<double, 2, 3> Pinhole::projectJac(const Eigen::Vector3d &v3D)
@@ -95,7 +101,7 @@ Eigen::Matrix<double, 2, 3> Pinhole::projectJac(const Eigen::Vector3d &v3D)
 }
 
 bool Pinhole::ReconstructWithTwoViews(const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2, const std::vector<int> &vMatches12,
-                                        Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated)
+        Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated)
 {
     if (!tvr)
     {
@@ -108,9 +114,11 @@ bool Pinhole::ReconstructWithTwoViews(const std::vector<cv::KeyPoint> &vKeys1, c
 
 cv::Mat Pinhole::toK()
 {
-    cv::Mat K = (cv::Mat_<float>(3, 3)
-                        << mvParameters[0],
-                    0.f, mvParameters[2], 0.f, mvParameters[1], mvParameters[3], 0.f, 0.f, 1.f);
+    cv::Mat K = (cv::Mat_<float>(3, 3) <<
+                    mvParameters[0],             0.f, mvParameters[2],
+                                0.f, mvParameters[1], mvParameters[3],
+                                0.f,             0.f,             1.f
+                );
     return K;
 }
 
