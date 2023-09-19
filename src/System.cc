@@ -187,7 +187,9 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     }
 
     if (mSensor == IMU_STEREO || mSensor == IMU_MONOCULAR || mSensor == IMU_RGBD)
+    {
         mpAtlas->SetInertialSensor();
+    }
 
 
 // Step3. 创建并启动各个线程
@@ -222,16 +224,22 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mptLocalMapping = new thread(&ORB_SLAM3::LocalMapping::Run, mpLocalMapper);
     mpLocalMapper->mInitFr = initFr;
     if (settings_)
+    {
         mpLocalMapper->mThFarPoints = settings_->thFarPoints();
+    }
     else
+    {
         mpLocalMapper->mThFarPoints = fsSettings["thFarPoints"];
+    }
     if (mpLocalMapper->mThFarPoints != 0)
     {
         cout << "Discard points further than " << mpLocalMapper->mThFarPoints << " m from current camera" << endl;
         mpLocalMapper->mbFarPoints = true;
     }
     else
+    {
         mpLocalMapper->mbFarPoints = false;
+    }
 
     // 创建回环检测对象并启动回环检测线程（Initialize the Loop Closing thread and launch）
     // mSensor!=MONOCULAR && mSensor!=IMU_MONOCULAR 看来作者最早不支持单目的回环检测
@@ -350,8 +358,12 @@ Sophus::SE3f System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, 
     }
 
     if (mSensor == System::IMU_STEREO)
+    {
         for (size_t i_imu = 0; i_imu < vImuMeas.size(); i_imu++)
+        {
             mpTracker->GrabImuData(vImuMeas[i_imu]);
+        }
+    }
 
     // std::cout << "start GrabImageStereo" << std::endl;
     Sophus::SE3f Tcw = mpTracker->GrabImageStereo(imLeftToFeed, imRightToFeed, timestamp, filename);

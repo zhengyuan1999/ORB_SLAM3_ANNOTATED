@@ -277,13 +277,12 @@ private:
     std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
     std::mutex mMutexState;
 
-    //
     string mStrLoadAtlasFromFile; // 加载地图文件的路径
     string mStrSaveAtlasToFile;   // 保存地图文件的路径
 
-    string mStrVocabularyFilePath;
+    string mStrVocabularyFilePath; // 字典文件路径
 
-    Settings *settings_;
+    Settings *settings_; // 配置对象指针
 };
 
 } // namespace ORB_SLAM

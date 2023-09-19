@@ -1,7 +1,8 @@
 # 注释参考
 
 1. 程小六《视觉惯性 SLAM：理论与源码解析》
-2. On-Manifold Preintegration for Real-Time Visual-Inertial Odometry
+2. 高翔《视觉 SLAM 十四讲：从理论到实践》第 2 版
+3. On-Manifold Preintegration for Real-Time Visual-Inertial Odometry
 
 ---
 

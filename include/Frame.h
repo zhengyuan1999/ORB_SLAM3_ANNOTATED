@@ -197,7 +197,7 @@ public:
     static float invfy;
     cv::Mat mDistCoef;    // 相机畸变参数
 
-    float mbf; // mbf / fx（Stereo baseline multiplied by fx.）
+    float mbf; // mb * fx（Stereo baseline multiplied by fx.）
     float mb;  // 双目相机基线（Stereo baseline in meters.）
 
     // Threshold close/far points. Close points are inserted from 1 view.

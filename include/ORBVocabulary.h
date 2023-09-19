@@ -25,7 +25,7 @@
 namespace ORB_SLAM3
 {
 
-// 这里就是定义了 ORBVocabulary 类型，详见 ORB_SLAM3_ANNOTATED/Thirdparty/DBoW2/DBoW2/TemplatedVocabulary.h
+// 这里就是定义了 ORBVocabulary 类型，详见 Thirdparty/DBoW2/DBoW2/TemplatedVocabulary.h
 typedef DBoW2::TemplatedVocabulary<DBoW2::FORB::TDescriptor, DBoW2::FORB> ORBVocabulary;
 
 } // namespace ORB_SLAM

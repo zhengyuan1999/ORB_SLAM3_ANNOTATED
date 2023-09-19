@@ -94,9 +94,23 @@ public:
     virtual bool ReconstructWithTwoViews(const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2, const std::vector<int> &vMatches12,
             Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated) = 0;
 
+    // 返回内参矩阵
     virtual cv::Mat toK() = 0;
     virtual Eigen::Matrix3f toK_() = 0;
 
+    /**
+     * @brief 检查给定的关键点对是否满足对极几何约束
+     * 
+     * @param[in] otherCamera 另一个相机对象的指针
+     * @param[in] kp1 属于本相机对象的关键点
+     * @param[in] kp2 另一个相机对象的关键点
+     * @param[in] R12 另一个相机到本相机的旋转矩阵
+     * @param[in] t12 另一个相机到本相机的位置向量
+     * @param[in] sigmaLevel 
+     * @param[in] unc
+     * 
+     * @return 这对匹配关键点是否满足对极几何约束
+    */
     virtual bool epipolarConstrain(GeometricCamera *otherCamera, const cv::KeyPoint &kp1, const cv::KeyPoint &kp2, const Eigen::Matrix3f &R12, const Eigen::Vector3f &t12, const float sigmaLevel, const float unc) = 0;
 
     float getParameter(const int i) { return mvParameters[i]; }
@@ -104,6 +118,7 @@ public:
 
     size_t size() { return mvParameters.size(); }
 
+    // 针孔相机没用
     virtual bool matchAndtriangulate(const cv::KeyPoint &kp1, const cv::KeyPoint &kp2, GeometricCamera *pOther,
             Sophus::SE3f &Tcw1, Sophus::SE3f &Tcw2, const float sigmaLevel1, const float sigmaLevel2, Eigen::Vector3f &x3Dtriangulated) = 0;
 

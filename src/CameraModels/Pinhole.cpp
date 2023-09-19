@@ -125,7 +125,9 @@ cv::Mat Pinhole::toK()
 Eigen::Matrix3f Pinhole::toK_()
 {
     Eigen::Matrix3f K;
-    K << mvParameters[0], 0.f, mvParameters[2], 0.f, mvParameters[1], mvParameters[3], 0.f, 0.f, 1.f;
+    K << mvParameters[0],             0.f, mvParameters[2],
+                     0.f, mvParameters[1], mvParameters[3],
+                     0.f,             0.f,             1.f;
     return K;
 }
 
@@ -147,7 +149,9 @@ bool Pinhole::epipolarConstrain(GeometricCamera *pCamera2, const cv::KeyPoint &k
     const float den = a * a + b * b;
 
     if (den == 0)
+    {
         return false;
+    }
 
     const float dsqr = num * num / den;
 
@@ -157,6 +161,7 @@ bool Pinhole::epipolarConstrain(GeometricCamera *pCamera2, const cv::KeyPoint &k
 std::ostream &operator<<(std::ostream &os, const Pinhole &ph)
 {
     os << ph.mvParameters[0] << " " << ph.mvParameters[1] << " " << ph.mvParameters[2] << " " << ph.mvParameters[3];
+
     return os;
 }
 
@@ -169,18 +174,24 @@ std::istream &operator>>(std::istream &is, Pinhole &ph)
         is >> nextParam;
         ph.mvParameters[i] = nextParam;
     }
+
     return is;
 }
 
 bool Pinhole::IsEqual(GeometricCamera *pCam)
 {
     if (pCam->GetType() != GeometricCamera::CAM_PINHOLE)
+    {
         return false;
+    }
 
     Pinhole *pPinholeCam = (Pinhole *)pCam;
 
+    // 针孔相机参数一定为 4 {fx, fy, cx, cy}，这里的判断没啥用
     if (size() != pPinholeCam->size())
+    {
         return false;
+    }
 
     bool is_same_camera = true;
     for (size_t i = 0; i < size(); ++i)
@@ -193,4 +204,5 @@ bool Pinhole::IsEqual(GeometricCamera *pCam)
     }
     return is_same_camera;
 }
+
 }
