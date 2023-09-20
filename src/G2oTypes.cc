@@ -371,16 +371,26 @@ void EdgeMono::linearizeOplus()
     const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
 
     const Eigen::Matrix<double, 2, 3> proj_jac = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
-    _jacobianOplusXi = -proj_jac * Rcw;
+    _jacobianOplusXi = -proj_jac * Rcw; // 公式（1.6-2）
+
+    /**
+     * proj_jac：像素坐标对相机坐标系下路标点的雅可比；
+     * Rcw：相机坐标系下路标点对世界坐标系下路标点的雅可比；
+     * _jacobianOplusXi：残差对世界坐标系下路标点的雅可比；
+     * SE3deriv：IMU 坐标系下路标点对任意坐标系到 IMU 坐标系变换矩阵扰动的雅可比；
+     * Rcb：IMU 坐标系下路标点对相机坐标系下路标点的雅可比。
+     * 
+     * TODO 为什么要出来个 IMU 坐标系，这就是紧耦合？
+    */
 
     Eigen::Matrix<double, 3, 6> SE3deriv;
     double x = Xb(0);
     double y = Xb(1);
     double z = Xb(2);
 
-    SE3deriv << 0.0, z, -y, 1.0, 0.0, 0.0,
-        -z, 0.0, x, 0.0, 1.0, 0.0,
-        y, -x, 0.0, 0.0, 0.0, 1.0;
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
 
     _jacobianOplusXj = proj_jac * Rcb * SE3deriv; // TODO optimize this product
 }
@@ -401,9 +411,11 @@ void EdgeMonoOnlyPose::linearizeOplus()
     double x = Xb(0);
     double y = Xb(1);
     double z = Xb(2);
-    SE3deriv << 0.0, z, -y, 1.0, 0.0, 0.0,
-        -z, 0.0, x, 0.0, 1.0, 0.0,
-        y, -x, 0.0, 0.0, 0.0, 1.0;
+
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
+
     _jacobianOplusXi = proj_jac * Rcb * SE3deriv; // symbol different becasue of update mode
 }
 
@@ -425,16 +437,16 @@ void EdgeStereo::linearizeOplus()
     proj_jac.block<1, 3>(2, 0) = proj_jac.block<1, 3>(0, 0);
     proj_jac(2, 2) += bf * inv_z2;
 
-    _jacobianOplusXi = -proj_jac * Rcw;
+    _jacobianOplusXi = -proj_jac * Rcw; // 公式（1.6-2）
 
     Eigen::Matrix<double, 3, 6> SE3deriv;
     double x = Xb(0);
     double y = Xb(1);
     double z = Xb(2);
 
-    SE3deriv << 0.0, z, -y, 1.0, 0.0, 0.0,
-        -z, 0.0, x, 0.0, 1.0, 0.0,
-        y, -x, 0.0, 0.0, 0.0, 1.0;
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
 
     _jacobianOplusXj = proj_jac * Rcb * SE3deriv;
 }
@@ -460,9 +472,10 @@ void EdgeStereoOnlyPose::linearizeOplus()
     double x = Xb(0);
     double y = Xb(1);
     double z = Xb(2);
-    SE3deriv << 0.0, z, -y, 1.0, 0.0, 0.0,
-        -z, 0.0, x, 0.0, 1.0, 0.0,
-        y, -x, 0.0, 0.0, 0.0, 1.0;
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
+
     _jacobianOplusXi = proj_jac * Rcb * SE3deriv;
 }
 
@@ -500,9 +513,10 @@ VertexAccBias::VertexAccBias(Frame *pF)
     setEstimate(ba);
 }
 
-EdgeInertial::EdgeInertial(IMU::Preintegrated *pInt) : JRg(pInt->JRg.cast<double>()),
-                                                        JVg(pInt->JVg.cast<double>()), JPg(pInt->JPg.cast<double>()), JVa(pInt->JVa.cast<double>()),
-                                                        JPa(pInt->JPa.cast<double>()), mpInt(pInt), dt(pInt->dT)
+EdgeInertial::EdgeInertial(IMU::Preintegrated *pInt)
+: JRg(pInt->JRg.cast<double>()), JVg(pInt->JVg.cast<double>()),
+  JPg(pInt->JPg.cast<double>()), JVa(pInt->JVa.cast<double>()),
+  JPa(pInt->JPa.cast<double>()), mpInt(pInt), dt(pInt->dT)
 {
     // This edge links 6 vertices
     resize(6);
@@ -513,8 +527,12 @@ EdgeInertial::EdgeInertial(IMU::Preintegrated *pInt) : JRg(pInt->JRg.cast<double
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 9, 9>> es(Info);
     Eigen::Matrix<double, 9, 1> eigs = es.eigenvalues();
     for (int i = 0; i < 9; i++)
+    {
         if (eigs[i] < 1e-12)
+        {
             eigs[i] = 0;
+        }
+    }
     Info = es.eigenvectors() * eigs.asDiagonal() * es.eigenvectors().transpose();
     setInformation(Info);
 }

@@ -202,9 +202,9 @@ void EdgeSE3ProjectXYZ::linearizeOplus()
     double y = xyz_trans[1];
     double z = xyz_trans[2];
 
-    auto projectJac = -pCamera->projectJac(xyz_trans); // 公式（1.6-2）
+    auto projectJac = -pCamera->projectJac(xyz_trans);
 
-    _jacobianOplusXi = projectJac * T.rotation().toRotationMatrix();
+    _jacobianOplusXi = projectJac * T.rotation().toRotationMatrix(); // 公式（1.6-2）
 
     Eigen::Matrix<double, 3, 6> SE3deriv;
     SE3deriv << 0.f,   z,  -y, 1.f, 0.f, 0.f,

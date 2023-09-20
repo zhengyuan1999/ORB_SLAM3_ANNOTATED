@@ -78,7 +78,7 @@ public:
     virtual Eigen::Vector3f unprojectEig(const cv::Point2f &p2D) = 0;
     virtual cv::Point3f unproject(const cv::Point2f &p2D) = 0;
 
-    // 因变量（投影到相机上的像素点）对自变量（路标点）的雅可比
+    // 因变量（投影到相机上的像素点）对自变量（相机坐标系下的路标点）的雅可比
     virtual Eigen::Matrix<double, 2, 3> projectJac(const Eigen::Vector3d &v3D) = 0;
 
     /**

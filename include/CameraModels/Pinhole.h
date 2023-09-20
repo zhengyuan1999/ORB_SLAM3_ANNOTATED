@@ -76,6 +76,7 @@ public:
     Eigen::Vector3f unprojectEig(const cv::Point2f &p2D);
     cv::Point3f unproject(const cv::Point2f &p2D);
 
+    // 因变量（投影到相机上的像素点）对自变量（相机坐标系下的路标点）的雅可比
     Eigen::Matrix<double, 2, 3> projectJac(const Eigen::Vector3d &v3D);
 
     bool ReconstructWithTwoViews(const std::vector<cv::KeyPoint> &vKeys1, const std::vector<cv::KeyPoint> &vKeys2, const std::vector<int> &vMatches12,
