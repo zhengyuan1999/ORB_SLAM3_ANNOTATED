@@ -609,45 +609,52 @@ void EdgeInertial::linearizeOplus()
     const Eigen::Vector3d er = LogSO3(eR);
     const Eigen::Matrix3d invJr = InverseRightJacobianSO3(er);
 
+    /**
+     * _jacobianOplus[0] 是一个 9 x 6 的矩阵：
+     *      | 旋转残差对旋转增量 i 的雅可比 | 旋转残差对位置增量 i 的雅可比 |
+     *      | 速度残差对旋转增量 i 的雅可比 | 速度残差对位置增量 i 的雅可比 |
+     *      | 位置残差对旋转增量 i 的雅可比 | 位置残差对位置增量 i 的雅可比 |
+    */
+
 // Jacobians wrt Pose 1
     _jacobianOplus[0].setZero();
-    // 公式（1.15-75）（rotation）
+    // 公式（1.15-75）：旋转残差对旋转增量 i 的雅可比（rotation）
     _jacobianOplus[0].block<3, 3>(0, 0) = -invJr * Rwb2.transpose() * Rwb1;                                                                                 // OK
-    // 公式（1.15-89）
+    // 公式（1.15-89）：速度残差对旋转增量 i 的雅可比
     _jacobianOplus[0].block<3, 3>(3, 0) = Sophus::SO3d::hat(Rbw1 * (VV2->estimate() - VV1->estimate() - g * dt));                                           // OK
-    // 公式（1.15-101）
+    // 公式（1.15-101）：位置残差对旋转增量 i 的雅可比
     _jacobianOplus[0].block<3, 3>(6, 0) = Sophus::SO3d::hat(Rbw1 * (VP2->estimate().twb - VP1->estimate().twb - VV1->estimate() * dt - 0.5 * g * dt * dt)); // OK
-    // 公式（1.15-97）（translation）
+    // 公式（1.15-97）：位置残差对位置增量 i 的雅可比（translation）
     _jacobianOplus[0].block<3, 3>(6, 3) = -Eigen::Matrix3d::Identity(); // OK
 
 // Jacobians wrt Velocity 1
     _jacobianOplus[1].setZero();
-    // 公式（1.15-85）
+    // 公式（1.15-85）：速度残差对速度增量 i 的雅可比
     _jacobianOplus[1].block<3, 3>(3, 0) = -Rbw1;      // OK
-    // 公式（1.15-99）
+    // 公式（1.15-99）：位置残差对速度增量 i 的雅可比
     _jacobianOplus[1].block<3, 3>(6, 0) = -Rbw1 * dt; // OK
 
 // Jacobians wrt Gyro 1
     _jacobianOplus[2].setZero();
-    // 公式（1.15-79）
+    // 公式（1.15-79）：旋转残差对陀螺仪增量的增量的雅可比
     _jacobianOplus[2].block<3, 3>(0, 0) = -invJr * eR.transpose() * RightJacobianSO3(JRg * dbg) * JRg; // OK
-    // 公式（1.15-82）
+    // 公式（1.15-82）：速度残差对陀螺仪增量的增量的雅可比
     _jacobianOplus[2].block<3, 3>(3, 0) = -JVg;                                                        // OK
-    // 公式（1.15-92）
+    // 公式（1.15-92）：位置残差对陀螺仪增量的增量的雅可比
     _jacobianOplus[2].block<3, 3>(6, 0) = -JPg;                                                        // OK
 
 // Jacobians wrt Accelerometer 1
     _jacobianOplus[3].setZero();
-    // 公式（1.15-83）
+    // 公式（1.15-83）：速度残差对加速度计增量的增量的雅可比
     _jacobianOplus[3].block<3, 3>(3, 0) = -JVa; // OK
-    // 公式（1.15-93）
+    // 公式（1.15-93）：位置残差对加速度计增量的增量的雅可比
     _jacobianOplus[3].block<3, 3>(6, 0) = -JPa; // OK
 
 // Jacobians wrt Pose 2
     _jacobianOplus[4].setZero();
-    // 公式（1.15-77）（rotation）
+    // 公式（1.15-77）：旋转残差对旋转增量 j 的雅可比（rotation）
     _jacobianOplus[4].block<3, 3>(0, 0) = invJr; // OK
-    // 公式（1.15-95）（translation）
+    // 公式（1.15-95）：位置残差对位置增量 j 的雅可比（translation）
     _jacobianOplus[4].block<3, 3>(6, 3) = Rbw1 * Rwb2; // OK
 
 // Jacobians wrt Velocity 2
@@ -657,9 +664,10 @@ void EdgeInertial::linearizeOplus()
 }
 
 
-EdgeInertialGS::EdgeInertialGS(IMU::Preintegrated *pInt) : JRg(pInt->JRg.cast<double>()),
-                                                            JVg(pInt->JVg.cast<double>()), JPg(pInt->JPg.cast<double>()), JVa(pInt->JVa.cast<double>()),
-                                                            JPa(pInt->JPa.cast<double>()), mpInt(pInt), dt(pInt->dT)
+EdgeInertialGS::EdgeInertialGS(IMU::Preintegrated *pInt)
+: JRg(pInt->JRg.cast<double>()),
+  JVg(pInt->JVg.cast<double>()), JPg(pInt->JPg.cast<double>()), JVa(pInt->JVa.cast<double>()),
+  JPa(pInt->JPa.cast<double>()), mpInt(pInt), dt(pInt->dT)
 {
     // This edge links 8 vertices
     resize(8);
@@ -670,8 +678,10 @@ EdgeInertialGS::EdgeInertialGS(IMU::Preintegrated *pInt) : JRg(pInt->JRg.cast<do
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 9, 9>> es(Info);
     Eigen::Matrix<double, 9, 1> eigs = es.eigenvalues();
     for (int i = 0; i < 9; i++)
-        if (eigs[i] < 1e-12)
-            eigs[i] = 0;
+    {
+        if (eigs[i] < 1e-12) eigs[i] = 0;
+    }
+            
     Info = es.eigenvectors() * eigs.asDiagonal() * es.eigenvectors().transpose();
     setInformation(Info);
 }
@@ -679,17 +689,19 @@ EdgeInertialGS::EdgeInertialGS(IMU::Preintegrated *pInt) : JRg(pInt->JRg.cast<do
 
 void EdgeInertialGS::computeError()
 {
-    // TODO Maybe Reintegrate inertial measurments when difference between linearization point and current estimate is too big
-    const VertexPose *VP1 = static_cast<const VertexPose *>(_vertices[0]);
-    const VertexVelocity *VV1 = static_cast<const VertexVelocity *>(_vertices[1]);
-    const VertexGyroBias *VG = static_cast<const VertexGyroBias *>(_vertices[2]);
-    const VertexAccBias *VA = static_cast<const VertexAccBias *>(_vertices[3]);
-    const VertexPose *VP2 = static_cast<const VertexPose *>(_vertices[4]);
-    const VertexVelocity *VV2 = static_cast<const VertexVelocity *>(_vertices[5]);
-    const VertexGDir *VGDir = static_cast<const VertexGDir *>(_vertices[6]);
-    const VertexScale *VS = static_cast<const VertexScale *>(_vertices[7]);
+    // -TODO Maybe Reintegrate inertial measurments when difference between linearization point and current estimate is too big
+    const VertexPose     *VP1   = static_cast<const VertexPose *>(_vertices[0]);     // 第 i 帧位姿估计值
+    const VertexVelocity *VV1   = static_cast<const VertexVelocity *>(_vertices[1]); // 第 i 帧速度估计值
+    const VertexGyroBias *VG    = static_cast<const VertexGyroBias *>(_vertices[2]); // 陀螺仪偏置
+    const VertexAccBias  *VA    = static_cast<const VertexAccBias *>(_vertices[3]);  // 加速度计偏置
+    const VertexPose     *VP2   = static_cast<const VertexPose *>(_vertices[4]);     // 第 j 帧位姿估计值
+    const VertexVelocity *VV2   = static_cast<const VertexVelocity *>(_vertices[5]); // 第 j 帧速度估计值
+    const VertexGDir     *VGDir = static_cast<const VertexGDir *>(_vertices[6]);     // TODO 重力估计值
+    const VertexScale    *VS    = static_cast<const VertexScale *>(_vertices[7]);    // 尺度估计值
+
     const IMU::Bias b(VA->estimate()[0], VA->estimate()[1], VA->estimate()[2], VG->estimate()[0], VG->estimate()[1], VG->estimate()[2]);
     g = VGDir->estimate().Rwg * gI;
+
     const double s = VS->estimate();
     const Eigen::Matrix3d dR = mpInt->GetDeltaRotation(b).cast<double>();
     const Eigen::Vector3d dV = mpInt->GetDeltaVelocity(b).cast<double>();
@@ -705,14 +717,15 @@ void EdgeInertialGS::computeError()
 
 void EdgeInertialGS::linearizeOplus()
 {
-    const VertexPose *VP1 = static_cast<const VertexPose *>(_vertices[0]);
+    const VertexPose     *VP1 = static_cast<const VertexPose *>(_vertices[0]);
     const VertexVelocity *VV1 = static_cast<const VertexVelocity *>(_vertices[1]);
     const VertexGyroBias *VG = static_cast<const VertexGyroBias *>(_vertices[2]);
-    const VertexAccBias *VA = static_cast<const VertexAccBias *>(_vertices[3]);
-    const VertexPose *VP2 = static_cast<const VertexPose *>(_vertices[4]);
+    const VertexAccBias  *VA = static_cast<const VertexAccBias *>(_vertices[3]);
+    const VertexPose     *VP2 = static_cast<const VertexPose *>(_vertices[4]);
     const VertexVelocity *VV2 = static_cast<const VertexVelocity *>(_vertices[5]);
-    const VertexGDir *VGDir = static_cast<const VertexGDir *>(_vertices[6]);
-    const VertexScale *VS = static_cast<const VertexScale *>(_vertices[7]);
+    const VertexGDir     *VGDir = static_cast<const VertexGDir *>(_vertices[6]);
+    const VertexScale    *VS = static_cast<const VertexScale *>(_vertices[7]);
+    
     const IMU::Bias b(VA->estimate()[0], VA->estimate()[1], VA->estimate()[2], VG->estimate()[0], VG->estimate()[1], VG->estimate()[2]);
     const IMU::Bias db = mpInt->GetDeltaBias(b);
 
