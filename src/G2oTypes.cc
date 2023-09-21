@@ -717,15 +717,15 @@ void EdgeInertialGS::computeError()
 
 void EdgeInertialGS::linearizeOplus()
 {
-    const VertexPose     *VP1 = static_cast<const VertexPose *>(_vertices[0]);
-    const VertexVelocity *VV1 = static_cast<const VertexVelocity *>(_vertices[1]);
-    const VertexGyroBias *VG = static_cast<const VertexGyroBias *>(_vertices[2]);
-    const VertexAccBias  *VA = static_cast<const VertexAccBias *>(_vertices[3]);
-    const VertexPose     *VP2 = static_cast<const VertexPose *>(_vertices[4]);
-    const VertexVelocity *VV2 = static_cast<const VertexVelocity *>(_vertices[5]);
+    const VertexPose     *VP1   = static_cast<const VertexPose *>(_vertices[0]);
+    const VertexVelocity *VV1   = static_cast<const VertexVelocity *>(_vertices[1]);
+    const VertexGyroBias *VG    = static_cast<const VertexGyroBias *>(_vertices[2]);
+    const VertexAccBias  *VA    = static_cast<const VertexAccBias *>(_vertices[3]);
+    const VertexPose     *VP2   = static_cast<const VertexPose *>(_vertices[4]);
+    const VertexVelocity *VV2   = static_cast<const VertexVelocity *>(_vertices[5]);
     const VertexGDir     *VGDir = static_cast<const VertexGDir *>(_vertices[6]);
-    const VertexScale    *VS = static_cast<const VertexScale *>(_vertices[7]);
-    
+    const VertexScale    *VS    = static_cast<const VertexScale *>(_vertices[7]);
+
     const IMU::Bias b(VA->estimate()[0], VA->estimate()[1], VA->estimate()[2], VG->estimate()[0], VG->estimate()[1], VG->estimate()[2]);
     const IMU::Bias db = mpInt->GetDeltaBias(b);
 
