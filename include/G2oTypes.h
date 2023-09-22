@@ -93,19 +93,21 @@ public:
     bool isDepthPositive(const Eigen::Vector3d &Xw, int cam_idx = 0) const;
 
 public:
-    // For IMU
+// For IMU
     Eigen::Matrix3d Rwb; // IMU 坐标系（Body）到世界坐标系的旋转矩阵
     Eigen::Vector3d twb; // IMU 坐标系到世界坐标系的位置向量
 
-    // For set of cameras
+// For set of cameras
     std::vector<Eigen::Matrix3d> Rcw; // 相机坐标系到世界坐标系的旋转矩阵
     std::vector<Eigen::Vector3d> tcw; // 相机坐标系到世界坐标系的位置向量
+
+// 不会更新它们 4 个
     std::vector<Eigen::Matrix3d> Rcb, Rbc;  // 相机坐标系与 IMU 坐标系之间的旋转矩阵
     std::vector<Eigen::Vector3d> tcb, tbc;  // 相机坐标系与 IMU 坐标系之间的位置向量
     double bf;                              // b * fx
     std::vector<GeometricCamera *> pCamera; // pCamera[0] 为左目，pCamera[1] 为右目（如果存在）
 
-    // For posegraph 4DoF
+// For posegraph 4DoF
     Eigen::Matrix3d Rwb0;
     Eigen::Matrix3d DR;
 
@@ -133,7 +135,7 @@ public:
 */
 
 
-// 优化 IMU 位姿节点（Optimizable parameters are IMU pose）
+// IMU 位姿节点（Optimizable parameters are IMU pose）
 class VertexPose : public g2o::BaseVertex<6, ImuCamPose>
 {
 public:

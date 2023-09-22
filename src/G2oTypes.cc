@@ -388,11 +388,19 @@ void EdgeMono::linearizeOplus()
     _jacobianOplusXi = -proj_jac * Rcw; // 公式（1.6-2）
 
     /**
-     * proj_jac：像素坐标对相机坐标系下路标点的雅可比；
-     * Rcw：相机坐标系下路标点对世界坐标系下路标点的雅可比；
-     * _jacobianOplusXi：残差对世界坐标系下路标点的雅可比；
-     * SE3deriv：IMU 坐标系下路标点对任意坐标系到 IMU 坐标系变换矩阵扰动的雅可比；
-     * Rcb：IMU 坐标系下路标点对相机坐标系下路标点的雅可比。
+     * e = p_obs-p = p_obs-K*Tcw*Pw = p_obs-K*Tcb*Tbw*Pw
+     * 
+     * 在 ORB-SLAM3 中，纯视觉 BA 和视觉惯性 BA 的位姿优化变量不一样了（对路标点优化变量还是一样的），
+     * 因为视觉惯性 BA 中的位姿优化变量由 ImuCamPose 实现，每次的更新都使用 ImuCamPose::Update，而
+     * Update 是针对 Rbw 和 tbw 所做的更新，因此，我们这里位姿优化变量由原来的 Tcw 变成了现在的 Tbw
+     * 
+     * proj_jac = ∂p/∂Pc = -∂e/∂Pc（像素坐标对相机坐标系下路标点的雅可比）
+     * Rcw      = ∂Pc/∂Pw         （相机坐标系下路标点对世界坐标系下路标点的雅可比）
+     * SE3deriv = ∂Pb/∂ϕ          （IMU 坐标系下路标点对任意坐标系到 IMU 坐标系变换矩阵扰动的雅可比）
+     * Rcb      = ∂Pc/∂Pb         （相机坐标系下路标点对 IMU 坐标系下路标点的雅可比）
+     * 
+     * _jacobianOplusXi = ∂e/∂Pw = ∂e/∂Pc * ∂Pc/∂Pw = -∂p/∂Pc * ∂Pc/∂Pw        （残差对世界坐标系下路标点的雅可比）
+     * _jacobianOplusXj = ∂e/∂Tbw = ∂e/∂Pc * ∂Pc/∂ϕ = ∂e/∂Pc * ∂Pc/∂Pb * ∂Pb/∂ϕ（残差对 Tbw 扰动的雅可比）
     */
 
     Eigen::Matrix<double, 3, 6> SE3deriv;
@@ -468,6 +476,17 @@ void EdgeStereo::linearizeOplus()
                   y,  -x, 0.0, 0.0, 0.0, 1.0;
 
     _jacobianOplusXj = proj_jac * Rcb * SE3deriv;
+
+    Eigen::Matrix<double, 3, 6> test;
+test <<    0.0,  Xc(2), -Xc(1), 1.0, 0.0, 0.0,
+        -Xc(2),    0.0,  Xc(0), 0.0, 1.0, 0.0,
+         Xc(1), -Xc(0),    0.0, 0.0, 0.0, 1.0;
+
+    cout <<"------------------------------------------------------------------------------------------------" << endl;
+    cout << _jacobianOplusXj << endl<< endl;
+    cout << proj_jac * test << endl;
+    cout <<"------------------------------------------------------------------------------------------------" << endl;
+
 }
 
 
