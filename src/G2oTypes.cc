@@ -476,17 +476,6 @@ void EdgeStereo::linearizeOplus()
                   y,  -x, 0.0, 0.0, 0.0, 1.0;
 
     _jacobianOplusXj = proj_jac * Rcb * SE3deriv;
-
-    Eigen::Matrix<double, 3, 6> test;
-test <<    0.0,  Xc(2), -Xc(1), 1.0, 0.0, 0.0,
-        -Xc(2),    0.0,  Xc(0), 0.0, 1.0, 0.0,
-         Xc(1), -Xc(0),    0.0, 0.0, 0.0, 1.0;
-
-    cout <<"------------------------------------------------------------------------------------------------" << endl;
-    cout << _jacobianOplusXj << endl<< endl;
-    cout << proj_jac * test << endl;
-    cout <<"------------------------------------------------------------------------------------------------" << endl;
-
 }
 
 
