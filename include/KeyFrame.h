@@ -211,6 +211,8 @@ public:
     Sophus::SE3f GetImuPose();
     Eigen::Matrix3f GetRotation();
     Eigen::Vector3f GetTranslation();
+
+    // return mVw;
     Eigen::Vector3f GetVelocity();
     bool isVelocitySet();
 

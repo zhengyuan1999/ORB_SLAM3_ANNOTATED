@@ -139,14 +139,17 @@ public:
     // Returns inverse of rotation
     inline Eigen::Matrix3f GetRotationInverse() { return mRwc; }
 
+    // return mTcw;
     inline Sophus::SE3<float> GetPose() const
     {
         // TODO: can the Frame pose be accsessed from several threads? should this be protected somehow?
         return mTcw;
     }
 
+    // return mRwc;
     inline Eigen::Matrix3f GetRwc() const { return mRwc; }
 
+    // return mOw;（mOw = twc）
     inline Eigen::Vector3f GetOw() const { return mOw; }
 
     inline bool HasPose() const { return mbHasPose; }
@@ -277,9 +280,10 @@ public:
     map<long unsigned int, cv::Point2f> mmProjectPoints;
     map<long unsigned int, cv::Point2f> mmMatchedInImage;
 
+/** // 没用
     string mNameFile;
-
     int mnDataset;
+*/
 
 #ifdef REGISTER_TIMES
     double mTimeORB_Ext;

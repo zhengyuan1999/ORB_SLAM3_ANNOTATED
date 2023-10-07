@@ -23,6 +23,8 @@
 namespace ORB_SLAM3
 {
 
+// ImuCamPose =============================================================================================================
+
 ImuCamPose::ImuCamPose(KeyFrame *pKF) : its(0)
 {
     // Load IMU pose
@@ -267,6 +269,11 @@ void ImuCamPose::UpdateW(const double *pu)
     }
 }
 
+// ============================================================================================================= ImuCamPose
+
+
+
+// InvDepthPoint ==========================================================================================================
 
 /**
  * 下面两个没用到
@@ -281,6 +288,11 @@ void InvDepthPoint::Update(const double *pu)
 }
 */
 
+// ========================================================================================================== InvDepthPoint
+
+
+
+// Vertex =================================================================================================================
 
 bool VertexPose::read(std::istream &is)
 {
@@ -373,141 +385,6 @@ bool VertexPose::write(std::ostream &os) const
 }
 
 
-void EdgeMono::linearizeOplus()
-{
-    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[1]);
-    const g2o::VertexSBAPointXYZ *VPoint = static_cast<const g2o::VertexSBAPointXYZ *>(_vertices[0]);
-
-    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
-    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
-    const Eigen::Vector3d Xc = Rcw * VPoint->estimate() + tcw;
-    const Eigen::Vector3d Xb = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
-    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
-
-    const Eigen::Matrix<double, 2, 3> proj_jac = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
-    _jacobianOplusXi = -proj_jac * Rcw; // 公式（1.6-2）
-
-    /**
-     * e = p_obs-p = p_obs-K*Tcw*Pw = p_obs-K*Tcb*Tbw*Pw
-     * 
-     * 在 ORB-SLAM3 中，纯视觉 BA 和视觉惯性 BA 的位姿优化变量不一样了（对路标点优化变量还是一样的），
-     * 因为视觉惯性 BA 中的位姿优化变量由 ImuCamPose 实现，每次的更新都使用 ImuCamPose::Update，而
-     * Update 是针对 Rbw 和 tbw 所做的更新，因此，我们这里位姿优化变量由原来的 Tcw 变成了现在的 Tbw
-     * 
-     * proj_jac = ∂p/∂Pc = -∂e/∂Pc（像素坐标对相机坐标系下路标点的雅可比）
-     * Rcw      = ∂Pc/∂Pw         （相机坐标系下路标点对世界坐标系下路标点的雅可比）
-     * SE3deriv = ∂Pb/∂ϕ          （IMU 坐标系下路标点对任意坐标系到 IMU 坐标系变换矩阵扰动的雅可比）
-     * Rcb      = ∂Pc/∂Pb         （相机坐标系下路标点对 IMU 坐标系下路标点的雅可比）
-     * 
-     * _jacobianOplusXi = ∂e/∂Pw = ∂e/∂Pc * ∂Pc/∂Pw = -∂p/∂Pc * ∂Pc/∂Pw        （残差对世界坐标系下路标点的雅可比）
-     * _jacobianOplusXj = ∂e/∂Tbw = ∂e/∂Pc * ∂Pc/∂ϕ = ∂e/∂Pc * ∂Pc/∂Pb * ∂Pb/∂ϕ（残差对 Tbw 扰动的雅可比）
-    */
-
-    Eigen::Matrix<double, 3, 6> SE3deriv;
-    double x = Xb(0);
-    double y = Xb(1);
-    double z = Xb(2);
-
-    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
-                 -z, 0.0,   x, 0.0, 1.0, 0.0,
-                  y,  -x, 0.0, 0.0, 0.0, 1.0;
-
-    _jacobianOplusXj = proj_jac * Rcb * SE3deriv; // TODO optimize this product
-}
-
-
-void EdgeMonoOnlyPose::linearizeOplus()
-{
-    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[0]);
-
-    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
-    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
-    const Eigen::Vector3d Xc = Rcw * Xw + tcw;
-    const Eigen::Vector3d Xb = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
-    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
-
-    Eigen::Matrix<double, 2, 3> proj_jac = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
-
-    Eigen::Matrix<double, 3, 6> SE3deriv;
-    double x = Xb(0);
-    double y = Xb(1);
-    double z = Xb(2);
-
-    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
-                 -z, 0.0,   x, 0.0, 1.0, 0.0,
-                  y,  -x, 0.0, 0.0, 0.0, 1.0;
-
-    _jacobianOplusXi = proj_jac * Rcb * SE3deriv; // symbol different becasue of update mode
-}
-
-
-void EdgeStereo::linearizeOplus()
-{
-    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[1]);
-    const g2o::VertexSBAPointXYZ *VPoint = static_cast<const g2o::VertexSBAPointXYZ *>(_vertices[0]);
-
-    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
-    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
-    const Eigen::Vector3d Xc = Rcw * VPoint->estimate() + tcw;
-    const Eigen::Vector3d Xb = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
-    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
-    const double bf = VPose->estimate().bf;
-    const double inv_z2 = 1.0 / (Xc(2) * Xc(2));
-
-    /**
-     * proj_jac：像素坐标对相机坐标系下路标点的雅可比；
-     * 这里的 proj_jac 多了一行，这是因为这里定义的双目观测为三维 (u, v, w=u-bf/Z)，
-     * 所以 proj_jac 多了一行导数 (∂u/∂Xc, ∂v/∂Xc, ∂w/∂Xc)
-    */
-    Eigen::Matrix<double, 3, 3> proj_jac;
-    proj_jac.block<2, 3>(0, 0) = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
-    proj_jac.block<1, 3>(2, 0) = proj_jac.block<1, 3>(0, 0);
-    proj_jac(2, 2) += bf * inv_z2;
-
-    _jacobianOplusXi = -proj_jac * Rcw; // 公式（1.6-2）
-
-    Eigen::Matrix<double, 3, 6> SE3deriv;
-    double x = Xb(0);
-    double y = Xb(1);
-    double z = Xb(2);
-
-    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
-                 -z, 0.0,   x, 0.0, 1.0, 0.0,
-                  y,  -x, 0.0, 0.0, 0.0, 1.0;
-
-    _jacobianOplusXj = proj_jac * Rcb * SE3deriv;
-}
-
-
-void EdgeStereoOnlyPose::linearizeOplus()
-{
-    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[0]);
-
-    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
-    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
-    const Eigen::Vector3d Xc = Rcw * Xw + tcw;
-    const Eigen::Vector3d Xb = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
-    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
-    const double bf = VPose->estimate().bf;
-    const double inv_z2 = 1.0 / (Xc(2) * Xc(2));
-
-    Eigen::Matrix<double, 3, 3> proj_jac;
-    proj_jac.block<2, 3>(0, 0) = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
-    proj_jac.block<1, 3>(2, 0) = proj_jac.block<1, 3>(0, 0);
-    proj_jac(2, 2) += bf * inv_z2;
-
-    Eigen::Matrix<double, 3, 6> SE3deriv;
-    double x = Xb(0);
-    double y = Xb(1);
-    double z = Xb(2);
-    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
-                 -z, 0.0,   x, 0.0, 1.0, 0.0,
-                  y,  -x, 0.0, 0.0, 0.0, 1.0;
-
-    _jacobianOplusXi = proj_jac * Rcb * SE3deriv;
-}
-
-
 VertexVelocity::VertexVelocity(KeyFrame *pKF)
 {
     setEstimate(pKF->GetVelocity().cast<double>());
@@ -545,6 +422,151 @@ VertexAccBias::VertexAccBias(Frame *pF)
     Eigen::Vector3d ba;
     ba << pF->mImuBias.bax, pF->mImuBias.bay, pF->mImuBias.baz;
     setEstimate(ba);
+}
+
+// ================================================================================================================= Vertex
+
+
+
+
+// Edge ===================================================================================================================
+
+void EdgeMono::linearizeOplus()
+{
+    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[1]);
+    const g2o::VertexSBAPointXYZ *VPoint = static_cast<const g2o::VertexSBAPointXYZ *>(_vertices[0]);
+
+    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
+    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
+    const Eigen::Vector3d Xc   = Rcw * VPoint->estimate() + tcw;
+    const Eigen::Vector3d Xb   = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
+    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
+
+    const Eigen::Matrix<double, 2, 3> proj_jac = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
+    _jacobianOplusXi = -proj_jac * Rcw; // 公式（1.6-2）
+
+    /**
+     *                                             ↓        位姿优化变量  
+     * e = p_obs-p = p_obs-K*Tcw*Pw = p_obs-K*Tcb*Tbw*Pw
+     *                                                ↑     路标点优化变量
+     * 
+     * 在 ORB-SLAM3 中，纯视觉 BA 和视觉惯性 BA 的位姿优化变量不一样了（对路标点优化变量还是一样的），
+     * 因为视觉惯性 BA 中的位姿优化变量由 ImuCamPose 实现，每次的更新都使用 ImuCamPose::Update，而
+     * Update 是针对 Rbw 和 tbw 所做的更新，因此，我们这里位姿优化变量由原来的 Tcw 变成了现在的 Tbw
+     * 
+     * proj_jac = ∂p/∂Pc = -∂e/∂Pc（像素坐标对相机坐标系下路标点的雅可比）
+     * Rcw      = ∂Pc/∂Pw         （相机坐标系下路标点对世界坐标系下路标点的雅可比）
+     * SE3deriv = ∂Pb/∂ϕ          （IMU 坐标系下路标点对任意坐标系到 IMU 坐标系变换矩阵扰动的雅可比）
+     * Rcb      = ∂Pc/∂Pb         （相机坐标系下路标点对 IMU 坐标系下路标点的雅可比）
+     * 
+     * _jacobianOplusXi = ∂e/∂Pw = ∂e/∂Pc * ∂Pc/∂Pw = -∂p/∂Pc * ∂Pc/∂Pw        （残差对世界坐标系下路标点的雅可比）
+     * _jacobianOplusXj = ∂e/∂Tbw = ∂e/∂Pc * ∂Pc/∂ϕ = ∂e/∂Pc * ∂Pc/∂Pb * ∂Pb/∂ϕ（残差对 Tbw 扰动的雅可比）
+    */
+
+    Eigen::Matrix<double, 3, 6> SE3deriv;
+    double x = Xb(0);
+    double y = Xb(1);
+    double z = Xb(2);
+
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
+
+    _jacobianOplusXj = proj_jac * Rcb * SE3deriv; // TODO optimize this product
+}
+
+
+void EdgeMonoOnlyPose::linearizeOplus()
+{
+    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[0]);
+
+    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
+    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
+    const Eigen::Vector3d Xc   = Rcw * Xw + tcw;
+    const Eigen::Vector3d Xb   = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
+    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
+
+    Eigen::Matrix<double, 2, 3> proj_jac = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
+
+    Eigen::Matrix<double, 3, 6> SE3deriv;
+    double x = Xb(0);
+    double y = Xb(1);
+    double z = Xb(2);
+
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
+
+    _jacobianOplusXi = proj_jac * Rcb * SE3deriv; // symbol different becasue of update mode
+}
+
+
+void EdgeStereo::linearizeOplus()
+{
+    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[1]);
+    const g2o::VertexSBAPointXYZ *VPoint = static_cast<const g2o::VertexSBAPointXYZ *>(_vertices[0]);
+
+    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
+    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
+    const Eigen::Vector3d Xc   = Rcw * VPoint->estimate() + tcw;
+    const Eigen::Vector3d Xb   = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
+    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
+    const double bf = VPose->estimate().bf;
+    const double inv_z2 = 1.0 / (Xc(2) * Xc(2));
+
+    /**
+     * proj_jac：像素坐标对相机坐标系下路标点的雅可比；
+     * 
+     * 这里的 proj_jac 多了一行，这是因为这里定义的双目观测为三维 (u, v, w=u-bf/Z)，
+     * 所以 proj_jac 多了一行导数 (∂u/∂Xc, ∂v/∂Xc, ∂w/∂Xc)
+    */
+    Eigen::Matrix<double, 3, 3> proj_jac;
+    proj_jac.block<2, 3>(0, 0) = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
+    proj_jac.block<1, 3>(2, 0) = proj_jac.block<1, 3>(0, 0);
+    proj_jac(2, 2) += bf * inv_z2;
+
+    _jacobianOplusXi = -proj_jac * Rcw; // 公式（1.6-2）
+
+    Eigen::Matrix<double, 3, 6> SE3deriv;
+    double x = Xb(0);
+    double y = Xb(1);
+    double z = Xb(2);
+
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
+
+    //      3x6      =   3x3    * 3x3 *   3x6
+    _jacobianOplusXj = proj_jac * Rcb * SE3deriv;
+}
+
+
+void EdgeStereoOnlyPose::linearizeOplus()
+{
+    const VertexPose *VPose = static_cast<const VertexPose *>(_vertices[0]);
+
+    const Eigen::Matrix3d &Rcw = VPose->estimate().Rcw[cam_idx];
+    const Eigen::Vector3d &tcw = VPose->estimate().tcw[cam_idx];
+    const Eigen::Vector3d Xc = Rcw * Xw + tcw;
+    const Eigen::Vector3d Xb = VPose->estimate().Rbc[cam_idx] * Xc + VPose->estimate().tbc[cam_idx];
+    const Eigen::Matrix3d &Rcb = VPose->estimate().Rcb[cam_idx];
+    const double bf = VPose->estimate().bf;
+    const double inv_z2 = 1.0 / (Xc(2) * Xc(2));
+
+    Eigen::Matrix<double, 3, 3> proj_jac;
+    proj_jac.block<2, 3>(0, 0) = VPose->estimate().pCamera[cam_idx]->projectJac(Xc);
+    proj_jac.block<1, 3>(2, 0) = proj_jac.block<1, 3>(0, 0);
+    proj_jac(2, 2) += bf * inv_z2;
+
+    Eigen::Matrix<double, 3, 6> SE3deriv;
+    double x = Xb(0);
+    double y = Xb(1);
+    double z = Xb(2);
+    SE3deriv << 0.0,   z,  -y, 1.0, 0.0, 0.0,
+                 -z, 0.0,   x, 0.0, 1.0, 0.0,
+                  y,  -x, 0.0, 0.0, 0.0, 1.0;
+
+    _jacobianOplusXi = proj_jac * Rcb * SE3deriv;
 }
 
 
@@ -612,9 +634,9 @@ void EdgeInertial::linearizeOplus()
     const Eigen::Matrix3d Rbw1 = Rwb1.transpose();
     const Eigen::Matrix3d Rwb2 = VP2->estimate().Rwb;
 
-    const Eigen::Matrix3d dR = mpInt->GetDeltaRotation(b1).cast<double>();
-    const Eigen::Matrix3d eR = dR.transpose() * Rbw1 * Rwb2;
-    const Eigen::Vector3d er = LogSO3(eR);
+    const Eigen::Matrix3d dR    = mpInt->GetDeltaRotation(b1).cast<double>();
+    const Eigen::Matrix3d eR    = dR.transpose() * Rbw1 * Rwb2;
+    const Eigen::Vector3d er    = LogSO3(eR);
     const Eigen::Matrix3d invJr = InverseRightJacobianSO3(er);
 
     /**
@@ -673,8 +695,8 @@ void EdgeInertial::linearizeOplus()
 
 
 EdgeInertialGS::EdgeInertialGS(IMU::Preintegrated *pInt)
-: JRg(pInt->JRg.cast<double>()),
-  JVg(pInt->JVg.cast<double>()), JPg(pInt->JPg.cast<double>()), JVa(pInt->JVa.cast<double>()),
+: JRg(pInt->JRg.cast<double>()), JVg(pInt->JVg.cast<double>()),
+  JPg(pInt->JPg.cast<double>()), JVa(pInt->JVa.cast<double>()),
   JPa(pInt->JPa.cast<double>()), mpInt(pInt), dt(pInt->dT)
 {
     // This edge links 8 vertices
@@ -704,7 +726,7 @@ void EdgeInertialGS::computeError()
     const VertexAccBias  *VA    = static_cast<const VertexAccBias *>(_vertices[3]);  // 加速度计偏置
     const VertexPose     *VP2   = static_cast<const VertexPose *>(_vertices[4]);     // 第 j 帧位姿估计值
     const VertexVelocity *VV2   = static_cast<const VertexVelocity *>(_vertices[5]); // 第 j 帧速度估计值
-    const VertexGDir     *VGDir = static_cast<const VertexGDir *>(_vertices[6]);     // TODO 重力估计值
+    const VertexGDir     *VGDir = static_cast<const VertexGDir *>(_vertices[6]);     // 重力方向估计值
     const VertexScale    *VS    = static_cast<const VertexScale *>(_vertices[7]);    // 尺度估计值
 
     const IMU::Bias b(VA->estimate()[0], VA->estimate()[1], VA->estimate()[2], VG->estimate()[0], VG->estimate()[1], VG->estimate()[2]);
@@ -715,9 +737,9 @@ void EdgeInertialGS::computeError()
     const Eigen::Vector3d dV = mpInt->GetDeltaVelocity(b).cast<double>();
     const Eigen::Vector3d dP = mpInt->GetDeltaPosition(b).cast<double>();
 
-    const Eigen::Vector3d er = LogSO3(dR.transpose() * VP1->estimate().Rwb.transpose() * VP2->estimate().Rwb);
-    const Eigen::Vector3d ev = VP1->estimate().Rwb.transpose() * (s * (VV2->estimate() - VV1->estimate()) - g * dt) - dV;
-    const Eigen::Vector3d ep = VP1->estimate().Rwb.transpose() * (s * (VP2->estimate().twb - VP1->estimate().twb - VV1->estimate() * dt) - g * dt * dt / 2) - dP;
+    const Eigen::Vector3d er = LogSO3(dR.transpose() * VP1->estimate().Rwb.transpose() * VP2->estimate().Rwb);            // 公式（1.18-3）
+    const Eigen::Vector3d ev = VP1->estimate().Rwb.transpose() * (s * (VV2->estimate() - VV1->estimate()) - g * dt) - dV; // 公式（1.18-4）
+    const Eigen::Vector3d ep = VP1->estimate().Rwb.transpose() * (s * (VP2->estimate().twb - VP1->estimate().twb - VV1->estimate() * dt) - g * dt * dt / 2) - dP; // 公式（1.18-5）
 
     _error << er, ev, ep;
 }
@@ -731,6 +753,7 @@ void EdgeInertialGS::linearizeOplus()
     const VertexAccBias  *VA    = static_cast<const VertexAccBias *>(_vertices[3]);
     const VertexPose     *VP2   = static_cast<const VertexPose *>(_vertices[4]);
     const VertexVelocity *VV2   = static_cast<const VertexVelocity *>(_vertices[5]);
+    
     const VertexGDir     *VGDir = static_cast<const VertexGDir *>(_vertices[6]);
     const VertexScale    *VS    = static_cast<const VertexScale *>(_vertices[7]);
 
@@ -754,8 +777,8 @@ void EdgeInertialGS::linearizeOplus()
     const Eigen::Vector3d er = LogSO3(eR);
     const Eigen::Matrix3d invJr = InverseRightJacobianSO3(er);
 
-    // Jacobians wrt Pose 1
-    _jacobianOplus[0].setZero();
+// Jacobians wrt Pose 1
+    _jacobianOplus[0].setZero(); // 9 x 6
     // rotation
     _jacobianOplus[0].block<3, 3>(0, 0) = -invJr * Rwb2.transpose() * Rwb1;
     _jacobianOplus[0].block<3, 3>(3, 0) = Sophus::SO3d::hat(Rbw1 * (s * (VV2->estimate() - VV1->estimate()) - g * dt));
@@ -763,40 +786,47 @@ void EdgeInertialGS::linearizeOplus()
     // translation
     _jacobianOplus[0].block<3, 3>(6, 3) = Eigen::DiagonalMatrix<double, 3>(-s, -s, -s);
 
-    // Jacobians wrt Velocity 1
-    _jacobianOplus[1].setZero();
+
+// Jacobians wrt Velocity 1
+    _jacobianOplus[1].setZero(); // 9 x 3
     _jacobianOplus[1].block<3, 3>(3, 0) = -s * Rbw1;
     _jacobianOplus[1].block<3, 3>(6, 0) = -s * Rbw1 * dt;
 
-    // Jacobians wrt Gyro bias
-    _jacobianOplus[2].setZero();
+
+// Jacobians wrt Gyro bias
+    _jacobianOplus[2].setZero(); // 9 x 3
     _jacobianOplus[2].block<3, 3>(0, 0) = -invJr * eR.transpose() * RightJacobianSO3(JRg * dbg) * JRg;
     _jacobianOplus[2].block<3, 3>(3, 0) = -JVg;
     _jacobianOplus[2].block<3, 3>(6, 0) = -JPg;
 
-    // Jacobians wrt Accelerometer bias
-    _jacobianOplus[3].setZero();
+
+// Jacobians wrt Accelerometer bias
+    _jacobianOplus[3].setZero(); // 9 x 3
     _jacobianOplus[3].block<3, 3>(3, 0) = -JVa;
     _jacobianOplus[3].block<3, 3>(6, 0) = -JPa;
 
-    // Jacobians wrt Pose 2
-    _jacobianOplus[4].setZero();
+
+// Jacobians wrt Pose 2
+    _jacobianOplus[4].setZero(); // 9 x 6
     // rotation
     _jacobianOplus[4].block<3, 3>(0, 0) = invJr;
     // translation
     _jacobianOplus[4].block<3, 3>(6, 3) = s * Rbw1 * Rwb2;
 
-    // Jacobians wrt Velocity 2
-    _jacobianOplus[5].setZero();
+
+// Jacobians wrt Velocity 2
+    _jacobianOplus[5].setZero(); // 9 x 3
     _jacobianOplus[5].block<3, 3>(3, 0) = s * Rbw1;
 
-    // Jacobians wrt Gravity direction
-    _jacobianOplus[6].setZero();
+
+// Jacobians wrt Gravity direction
+    _jacobianOplus[6].setZero(); // 9 x 2
     _jacobianOplus[6].block<3, 2>(3, 0) = -Rbw1 * dGdTheta * dt;
     _jacobianOplus[6].block<3, 2>(6, 0) = -0.5 * Rbw1 * dGdTheta * dt * dt;
 
-    // Jacobians wrt scale factor
-    _jacobianOplus[7].setZero();
+
+// Jacobians wrt scale factor
+    _jacobianOplus[7].setZero(); // 9 x 1
     _jacobianOplus[7].block<3, 1>(3, 0) = Rbw1 * (VV2->estimate() - VV1->estimate());
     _jacobianOplus[7].block<3, 1>(6, 0) = Rbw1 * (VP2->estimate().twb - VP1->estimate().twb - VV1->estimate() * dt);
 }
@@ -816,14 +846,14 @@ EdgePriorPoseImu::EdgePriorPoseImu(ConstraintPoseImu *c)
 
 void EdgePriorPoseImu::computeError()
 {
-    const VertexPose *VP = static_cast<const VertexPose *>(_vertices[0]);
+    const VertexPose     *VP = static_cast<const VertexPose *>(_vertices[0]);
     const VertexVelocity *VV = static_cast<const VertexVelocity *>(_vertices[1]);
     const VertexGyroBias *VG = static_cast<const VertexGyroBias *>(_vertices[2]);
-    const VertexAccBias *VA = static_cast<const VertexAccBias *>(_vertices[3]);
+    const VertexAccBias  *VA = static_cast<const VertexAccBias *>(_vertices[3]);
 
-    const Eigen::Vector3d er = LogSO3(Rwb.transpose() * VP->estimate().Rwb);
-    const Eigen::Vector3d et = Rwb.transpose() * (VP->estimate().twb - twb);
-    const Eigen::Vector3d ev = VV->estimate() - vwb;
+    const Eigen::Vector3d er  = LogSO3(Rwb.transpose() * VP->estimate().Rwb);
+    const Eigen::Vector3d et  = Rwb.transpose() * (VP->estimate().twb - twb);
+    const Eigen::Vector3d ev  = VV->estimate() - vwb;
     const Eigen::Vector3d ebg = VG->estimate() - bg;
     const Eigen::Vector3d eba = VA->estimate() - ba;
 
@@ -846,11 +876,13 @@ void EdgePriorPoseImu::linearizeOplus()
     _jacobianOplus[3].block<3, 3>(12, 0) = Eigen::Matrix3d::Identity();
 }
 
+
 void EdgePriorAcc::linearizeOplus()
 {
     // Jacobian wrt bias
     _jacobianOplusXi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
 }
+
 
 void EdgePriorGyro::linearizeOplus()
 {
@@ -858,7 +890,12 @@ void EdgePriorGyro::linearizeOplus()
     _jacobianOplusXi.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
 }
 
-// SO3 FUNCTIONS
+// =================================================================================================================== Edge
+
+
+
+// SO3 FUNCTIONS ==========================================================================================================
+
 Eigen::Matrix3d ExpSO3(const Eigen::Vector3d &w)
 {
     return ExpSO3(w[0], w[1], w[2]);
@@ -885,12 +922,12 @@ Eigen::Matrix3d ExpSO3(const double x, const double y, const double z)
 }
 
 
-// 这里的 w 为什么这么设置？在邱博《IMU 预积分总结与公式推导》第 2 页最下边
 Eigen::Vector3d LogSO3(const Eigen::Matrix3d &R)
 {
     const double tr = R(0, 0) + R(1, 1) + R(2, 2);
     Eigen::Vector3d w;
     // w = ((R - R^T) / 2)'，这里的 ' 代表由反对称矩阵 -> 向量
+    // 这里的 w 为什么这么设置？在邱博《IMU 预积分总结与公式推导》第 2 页最下边
     w << (R(2, 1) - R(1, 2)) / 2, (R(0, 2) - R(2, 0)) / 2, (R(1, 0) - R(0, 1)) / 2;
     const double costheta = (tr - 1.0) * 0.5f;
     if (costheta > 1 || costheta < -1)
@@ -905,8 +942,7 @@ Eigen::Vector3d LogSO3(const Eigen::Matrix3d &R)
     }
     else
     {
-        // 真正的转轴 = ((R - R^T) / 2)' / sin(theta)
-        return theta * w / s;
+        return theta * w / s; // 真正的转轴 = ((R - R^T) / 2)' / sin(theta)
     }
 }
 
@@ -967,5 +1003,7 @@ Eigen::Matrix3d RightJacobianSO3(const double x, const double y, const double z)
 //     W << 0.0, -w[2], w[1], w[2], 0.0, -w[0], -w[1], w[0], 0.0;
 //     return W;
 // }
+
+// ========================================================================================================== SO3 FUNCTIONS
 
 }

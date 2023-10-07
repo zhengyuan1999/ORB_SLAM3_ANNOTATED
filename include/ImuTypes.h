@@ -276,22 +276,22 @@ public:
     }
 
 public:
-    float dT; // i 到 j-1 的总时长
-    Eigen::Matrix<float, 15, 15> C; // i 到 j-1 的信息矩阵
+    float dT; // i 到 j 的总时长
+    Eigen::Matrix<float, 15, 15> C; // i 到 j 的信息矩阵
     Eigen::Matrix<float, 15, 15> Info; // 这个没用上
     Eigen::DiagonalMatrix<float, 6> Nga; // IMU 测量协方差矩阵
     Eigen::DiagonalMatrix<float, 6> NgaWalk; // IMU 偏置随机游走的协方差矩阵
 
     Bias b; // 原偏置（Values for the original bias (when integration was computed)）
 
-    Eigen::Matrix3f dR;  // i 到 j-1 的预积分旋转测量值（测量值就是公式里上面带波浪线那个）
-    Eigen::Vector3f dV;  // i 到 j-1 的预积分旋转测量值
-    Eigen::Vector3f dP;  // i 到 j-1 的预积分位置测量值
-    Eigen::Matrix3f JRg; // i 到 j-1 的预积分旋转测量值对陀螺仪偏置的雅可比矩阵
-    Eigen::Matrix3f JVg; // i 到 j-1 的预积分速度测量值对陀螺仪偏置的雅可比矩阵
-    Eigen::Matrix3f JVa; // i 到 j-1 的预积分速度测量值对加速度计偏置的雅可比矩阵
-    Eigen::Matrix3f JPg; // i 到 j-1 的预积分位置测量值对陀螺仪偏置的雅可比矩阵
-    Eigen::Matrix3f JPa; // i 到 j-1 的预积分位置测量值对加速度计偏置的雅可比矩阵
+    Eigen::Matrix3f dR;  // i 到 j 的预积分旋转测量值（测量值就是公式里上面带波浪线那个）
+    Eigen::Vector3f dV;  // i 到 j 的预积分速度测量值
+    Eigen::Vector3f dP;  // i 到 j 的预积分位置测量值
+    Eigen::Matrix3f JRg; // i 到 j 的预积分旋转测量值对陀螺仪偏置的雅可比矩阵
+    Eigen::Matrix3f JVg; // i 到 j 的预积分速度测量值对陀螺仪偏置的雅可比矩阵
+    Eigen::Matrix3f JVa; // i 到 j 的预积分速度测量值对加速度计偏置的雅可比矩阵
+    Eigen::Matrix3f JPg; // i 到 j 的预积分位置测量值对陀螺仪偏置的雅可比矩阵
+    Eigen::Matrix3f JPa; // i 到 j 的预积分位置测量值对加速度计偏置的雅可比矩阵
     Eigen::Vector3f avgA, avgW; // 平均加速度和平均角速度
 
 private:

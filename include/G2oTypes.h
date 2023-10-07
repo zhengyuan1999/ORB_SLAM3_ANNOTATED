@@ -300,15 +300,17 @@ public:
 
     void Update(const double *pu)
     {
-        Rwg = Rwg * ExpSO3(pu[0], pu[1], 0.0);
+        Rwg = Rwg * ExpSO3(pu[0], pu[1], 0.0); // 公式（1.18-2）
     }
 
+    // gw = Rwg * g = Rwg * (0, 0, -IMU::GRAVITY_VALUE)^T
     Eigen::Matrix3d Rwg, Rgw;
 
     int its;
 };
 
 
+// IMU 初始化过程用到的重力方向节点
 class VertexGDir : public g2o::BaseVertex<2, GDirection>
 {
 public:
@@ -335,7 +337,7 @@ public:
 };
 
 
-// scale vertex
+// IMU 初始化过程用到的尺度节点（scale vertex）
 class VertexScale : public g2o::BaseVertex<1, double>
 {
 public:
@@ -362,7 +364,8 @@ public:
 
     virtual void oplusImpl(const double *update_)
     {
-        setEstimate(estimate() * exp(*update_));
+        // 公式（1.18-2 下一个），为了保证在优化过程中尺度因子始终为正值
+        setEstimate(estimate() * exp(*update_)); 
     }
 };
 
@@ -565,7 +568,7 @@ public:
 };
 
 
-class EdgeInertial : public g2o::BaseMultiEdge<9, Vector9d>
+class EdgeInertial : public g2o::BaseMultiEdge<9, Vector9d> // 9 维残差：(旋转残差, 速度残差, 位置残差)^T
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -616,16 +619,20 @@ public:
         return J.transpose() * information() * J;
     }
 
-    const Eigen::Matrix3d JRg, JVg, JPg;
-    const Eigen::Matrix3d JVa, JPa;
-    IMU::Preintegrated *mpInt;
-    const double dt;
-    Eigen::Vector3d g;
+    const Eigen::Matrix3d JRg; // 预积分旋转测量值对陀螺仪偏置的雅可比
+    const Eigen::Matrix3d JVg; // 预积分速度测量值对陀螺仪偏置的雅可比
+    const Eigen::Matrix3d JPg; // 预积分位置测量值对陀螺仪偏置的雅可比
+    const Eigen::Matrix3d JVa; // 预积分速度测量值对加速度计偏置的雅可比
+    const Eigen::Matrix3d JPa; // 预积分位置测量值对加速度计偏置的雅可比
+    IMU::Preintegrated *mpInt; // i 到 j 的预积分对象指针（第 2 关键帧的 mpImuPreintegrated）
+    const double dt;           // i 到 j 的总时长（(j-i)Δt）
+    Eigen::Vector3d g;         // (0, 0, -IMU::GRAVITY_VALUE)^T
 };
 
 
+// IMU 初始化
 // Edge inertial whre gravity is included as optimizable variable and it is not supposed to be pointing in -z axis, as well as scale
-class EdgeInertialGS : public g2o::BaseMultiEdge<9, Vector9d>
+class EdgeInertialGS : public g2o::BaseMultiEdge<9, Vector9d> // 9 维残差：(旋转残差, 速度残差, 位置残差)^T
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -802,14 +809,16 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     ConstraintPoseImu(const Eigen::Matrix3d &Rwb_, const Eigen::Vector3d &twb_, const Eigen::Vector3d &vwb_,
-                        const Eigen::Vector3d &bg_, const Eigen::Vector3d &ba_, const Matrix15d &H_) : Rwb(Rwb_), twb(twb_), vwb(vwb_), bg(bg_), ba(ba_), H(H_)
+            const Eigen::Vector3d &bg_, const Eigen::Vector3d &ba_, const Matrix15d &H_)
+    : Rwb(Rwb_), twb(twb_), vwb(vwb_), bg(bg_), ba(ba_), H(H_)
     {
         H = (H + H) / 2;
         Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 15, 15>> es(H);
         Eigen::Matrix<double, 15, 1> eigs = es.eigenvalues();
         for (int i = 0; i < 15; i++)
-            if (eigs[i] < 1e-12)
-                eigs[i] = 0;
+        {
+            if (eigs[i] < 1e-12) eigs[i] = 0;
+        }
         H = es.eigenvectors() * eigs.asDiagonal() * es.eigenvectors().transpose();
     }
 
@@ -934,8 +943,9 @@ public:
     {
         const VertexPose4DoF *VPi = static_cast<const VertexPose4DoF *>(_vertices[0]);
         const VertexPose4DoF *VPj = static_cast<const VertexPose4DoF *>(_vertices[1]);
+        
         _error << LogSO3(VPi->estimate().Rcw[0] * VPj->estimate().Rcw[0].transpose() * dRij.transpose()),
-            VPi->estimate().Rcw[0] * (-VPj->estimate().Rcw[0].transpose() * VPj->estimate().tcw[0]) + VPi->estimate().tcw[0] - dtij;
+                  VPi->estimate().Rcw[0] * (-VPj->estimate().Rcw[0].transpose() * VPj->estimate().tcw[0]) + VPi->estimate().tcw[0] - dtij;
     }
 
     // virtual void linearizeOplus(); // numerical implementation
