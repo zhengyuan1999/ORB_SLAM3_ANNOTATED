@@ -283,8 +283,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     }
 
 // Step4. 设定系统通知等级，只有小于等于该等级的消息才能打印到标准输出（Fix verbosity）
-    Verbose::SetTh(Verbose::VERBOSITY_QUIET);
-    // Verbose::SetTh(Verbose::VERBOSITY_DEBUG);
+    // Verbose::SetTh(Verbose::VERBOSITY_QUIET);
+    Verbose::SetTh(Verbose::VERBOSITY_DEBUG);
 }
 
 Sophus::SE3f System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp, const vector<IMU::Point> &vImuMeas, string filename)

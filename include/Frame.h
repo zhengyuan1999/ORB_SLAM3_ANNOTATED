@@ -309,10 +309,10 @@ private:
     std::mutex *mpMutexImu;
 
 public:
-    GeometricCamera *mpCamera, *mpCamera2;
+    GeometricCamera *mpCamera, *mpCamera2; // 只有鱼眼相机才有 mpCamera2
 
     // Number of KeyPoints extracted in the left and right images
-    int Nleft, Nright;
+    int Nleft, Nright; // 单目、双目和 RGB-D 中这两个成员变量始终为 -1
     // Number of Non Lapping Keypoints
     int monoLeft, monoRight;
 
